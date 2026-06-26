@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam Prep System — EY & SEPLAT</title>
+  <meta name="description" content="Practice for EY and SEPLAT aptitude exams with 300+ questions, timed tests, and full answer explanations.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <!-- ═══ EXAM SELECT SCREEN ═══ -->
+    <div class="screen active" id="s-select">
+      <div id="s-select-inner">
+        <div class="select-logo">🎯</div>
+        <div class="select-title">Exam Prep System</div>
+        <div class="select-sub">Choose the exam you're preparing for</div>
+
+        <div class="exam-cards">
+          <div class="exam-card ey" onclick="selectExam('ey')" id="card-ey">
+            <div class="ec-logo">🟡</div>
+            <div class="ec-name">EY Assessment</div>
+            <div class="ec-desc">Ernst & Young graduate aptitude test. Covers Logical, Numerical, Verbal, Critical, Data & Abstract Reasoning.</div>
+            <div class="ec-meta">158 questions · Multiple modes</div>
+            <div class="ec-tag">JOBBERMAN APTITUDE</div>
+          </div>
+          <div class="exam-card sep" onclick="selectExam('seplat')" id="card-seplat">
+            <div class="ec-logo">🟢</div>
+            <div class="ec-name">SEPLAT Assessment</div>
+            <div class="ec-desc">Seplat Petroleum aptitude test. Covers Numerical, Quantitative, Verbal Reasoning, Banking & Finance, and General Knowledge.</div>
+            <div class="ec-meta">197 questions · Practice & Timed</div>
+            <div class="ec-tag">PAST QUESTIONS</div>
+          </div>
+          <div class="exam-card gen" onclick="selectExam('general')" id="card-general">
+            <div class="ec-logo">🔵</div>
+            <div class="ec-name">General Aptitude</div>
+            <div class="ec-desc">Workforce aptitude assessment. Covers Numerical and Verbal Reasoning sections extracted from official exam papers.</div>
+            <div class="ec-meta">90 questions · Practice & Timed</div>
+            <div class="ec-tag">WORKFORCE APTITUDE</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ HOME SCREEN ═══ -->
+    <div class="screen" id="s-home">
+      <button class="back-btn" onclick="goToSelect()">← Switch Exam</button>
+      <div id="home-badge" class="exam-badge"></div>
+      <div class="app-title" id="home-title">Assessment Practice System</div>
+      <div class="app-sub" id="home-sub"></div>
+
+      <div class="section-lbl">Select mode</div>
+      <div class="mode-grid" id="mode-grid"></div>
+
+      <div class="section-lbl">Filter by category (leave all unselected for full mix)</div>
+      <div class="cat-wrap" id="home-cats"></div>
+
+      <div class="home-btns" id="home-btns"></div>
+    </div>
+
+    <!-- ═══ QUIZ SCREEN ═══ -->
+    <div class="screen" id="s-quiz">
+      <div class="quiz-topbar">
+        <div class="q-counter" id="q-counter">Question 1 of 50</div>
+        <div class="timer-area">
+          <div class="timer-box" id="timer" style="display:none">60:00</div>
+          <button class="pause-btn" id="pause-btn" onclick="togglePause()" style="display:none">⏸ Pause</button>
+        </div>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-v c" id="s-correct">0</div><div class="stat-l">Correct</div></div>
+        <div class="stat-box"><div class="stat-v w" id="s-wrong">0</div><div class="stat-l">Wrong</div></div>
+        <div class="stat-box"><div class="stat-v" id="s-remain">50</div><div class="stat-l">Remaining</div></div>
+      </div>
+      <div class="dots-wrap" id="dots"></div>
+      
+      <div class="q-card">
+        <span class="q-tag" id="q-tag">Numerical Reasoning</span>
+        <div class="q-chart" id="q-chart" style="display:none" onclick="toggleChart()">
+          <img id="q-chart-img" src="" alt="Chart/Table for this question">
+          <div class="q-chart-label" id="q-chart-label">📊 CHART</div>
+          <div class="q-chart-hint">Click to expand / collapse</div>
+        </div>
+        <div class="q-text" id="q-text"></div>
+        <div class="opts" id="opts"></div>
+        
+        <div class="explanation-box" id="exp-box">
+          <div class="exp-header" id="exp-header" onclick="toggleExp()">
+            <span class="exp-icon" id="exp-icon">✓</span>
+            <span id="exp-title">Correct! See explanation</span>
+            <span class="exp-toggle" id="exp-toggle">▾</span>
+          </div>
+          <div class="exp-body" id="exp-body"></div>
+        </div>
+        
+        <button class="ai-chat-btn" id="ai-chat-btn" onclick="openAiChat()">💬 Ask AI about this question</button>
+        <div class="ai-chat" id="ai-chat">
+          <div class="ai-chat-header" onclick="toggleAiChat()">
+            <div class="ai-chat-header-txt">🤖 Ask a follow-up question</div>
+            <button class="ai-chat-toggle" id="ai-chat-toggle-btn">▾ Hide</button>
+          </div>
+          <div class="ai-messages" id="ai-messages"></div>
+          <div class="ai-input-row">
+            <input class="ai-input" id="ai-input" placeholder="e.g. Why can't the answer be B?" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAiMsg();}"/>
+            <button class="ai-send" id="ai-send" onclick="sendAiMsg()">Ask</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="nav-row">
+        <button class="btn" id="btn-prev" onclick="go(-1)">← Prev</button>
+        <button class="skip-link" id="btn-skip" onclick="skip()">Skip for now</button>
+        <button class="btn primary" id="btn-next" onclick="go(1)">Next →</button>
+      </div>
+      <div style="text-align:center;margin-top:16px">
+        <button class="btn danger" onclick="confirmCancel()" style="font-size:.75rem;padding:6px 16px">✕ Cancel Assessment</button>
+      </div>
+    </div>
+
+    <!-- ═══ PAUSE OVERLAY ═══ -->
+    <div class="pause-overlay" id="pause-overlay">
+      <div class="pause-box">
+        <h2>⏸ Paused</h2>
+        <div class="pause-timer-big" id="pause-time-display">--:--</div>
+        <p>Your timer is paused. Take a breath — your progress is safe.</p>
+        <button class="btn primary" onclick="togglePause()" style="width:100%;margin-bottom:10px">▶ Resume</button>
+        <button class="btn danger" onclick="cancelAssessment()" style="width:100%;font-size:.8rem">✕ End & See Results</button>
+      </div>
+    </div>
+
+    <!-- ═══ CANCEL CONFIRM OVERLAY ═══ -->
+    <div class="pause-overlay" id="cancel-overlay">
+      <div class="pause-box">
+        <h2 style="color:var(--red)">Cancel Assessment?</h2>
+        <p style="margin-top:10px">Your current progress will be scored and you will see a results summary. This cannot be undone.</p>
+        <div style="display:flex;gap:10px;margin-top:1.5rem">
+          <button class="btn" onclick="closeCancelOverlay()" style="flex:1">Keep Going</button>
+          <button class="btn danger" onclick="cancelAssessment()" style="flex:1">End Assessment</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ RESULT SCREEN ═══ -->
+    <div class="screen" id="s-result">
+      <div class="result-wrap">
+        <div class="r-title">Assessment Complete</div>
+        <div class="r-pct" id="r-pct">0%</div>
+        <div class="r-grade" id="r-grade"></div>
+        <div class="mode-label" id="r-mode-label"></div>
+        <div class="r-msg" id="r-msg"></div>
+        <div class="breakdown" id="r-breakdown"></div>
+        <div class="result-btns">
+          <button class="btn primary" onclick="goHome()">New Session</button>
+          <button class="btn" onclick="reviewMode()">📝 Review All Answers</button>
+          <button class="btn" onclick="goToSelect()" style="font-size:.75rem">Switch Exam</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- .app -->
+
+  <!-- Load script database first, then app controller -->
+  <script src="questions.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
