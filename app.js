@@ -1,7 +1,7 @@
 // ─── EY QUESTION BANK ─────────────────────────────────────────────────────────
 // ─── SEPLAT QUESTION BANK ─────────────────────────────────────────────────────
 // ─── APP STATE ────────────────────────────────────────────────────────────────
-let currentExam = null; // 'ey', 'seplat', or 'general'
+let currentExam = null; // 'ey', 'seplat', 'general', or 'access'
 let BANK = [];
 let qs=[], mode='free', minutes=0, cur=0;
 let answered={}, skipped=new Set(), correct=0, wrong=0;
@@ -14,14 +14,14 @@ let expCollapsed = false;
 // ─── EXAM SELECTION ───────────────────────────────────────────────────────────
 function selectExam(exam) {
   currentExam = exam;
-  BANK = exam === 'ey' ? EY_BANK : (exam === 'seplat' ? SEPLAT_BANK : GENERAL_APTITUDE_BANK);
+  BANK = exam === 'ey' ? EY_BANK : (exam === 'seplat' ? SEPLAT_BANK : (exam === 'access' ? ACCESS_BANK : GENERAL_APTITUDE_BANK));
   CATS = [...new Set(BANK.map(q=>q.cat))];
   selectedCats.clear();
 
   const badge = document.getElementById('home-badge');
   const title = document.getElementById('home-title');
   const sub = document.getElementById('home-sub');
-  const accentProp = exam === 'ey' ? '--ey-gold' : (exam === 'seplat' ? '--sep-green' : '--gen-blue');
+  const accentProp = exam === 'ey' ? '--ey-gold' : (exam === 'seplat' ? '--sep-green' : (exam === 'access' ? '--acc-red' : '--gen-blue'));
   document.documentElement.style.setProperty('--accent', `var(${accentProp})`);
 
   if(exam === 'ey') {
@@ -47,6 +47,18 @@ function selectExam(exam) {
       {m:'free',mins:0,badge:'📖 PRACTICE',badgeCls:'practice',title:'Practice Mode',sub:'No clock. See explanations immediately after each answer.'},
     ]);
     document.getElementById('home-btns').innerHTML = `<button class="btn primary" onclick="startQuiz('timed',60)">Start 60-min Exam</button><button class="btn" onclick="startQuiz('free',0)">Practice Mode</button>`;
+  } else if(exam === 'access') {
+    badge.className = 'exam-badge acc';
+    badge.innerHTML = '🔴 ACCESS BANK APTITUDE PREP';
+    title.textContent = 'Access Bank Assessment Practice System';
+    sub.textContent = `${ACCESS_BANK.length} questions from real Access Bank past papers covering Quantitative Reasoning, Verbal Reasoning, Critical Reasoning, Intelligence & Pattern Recognition, and General Knowledge. Select a mode below to begin.`;
+    buildModeGrid([
+      {m:'timed',mins:90,badge:'⏱ 90 MIN EXAM',badgeCls:'timed',title:'Full Exam Mode',sub:'90 minutes simulating real Access Bank exam conditions. No calculator allowed.'},
+      {m:'timed',mins:60,badge:'✅ 60 MIN BLITZ',badgeCls:'fast',title:'Speed Mode',sub:'60 minutes, maximum pressure. Build exam speed and accuracy.'},
+      {m:'timed',mins:45,badge:'🔥 45 MIN DRILL',badgeCls:'fast',title:'Intensive Drill',sub:'45 minutes — fast-paced practice for 50 focused questions.'},
+      {m:'free',mins:0,badge:'📖 PRACTICE',badgeCls:'practice',title:'Practice Mode',sub:'No clock. See explanations and answer rationale immediately after each answer.'},
+    ]);
+    document.getElementById('home-btns').innerHTML = `<button class="btn primary" onclick="startQuiz('timed',90)">Start 90-min Exam</button><button class="btn" onclick="startQuiz('free',0)">Practice Mode</button>`;
   } else {
     badge.className = 'exam-badge gen';
     badge.innerHTML = '🔵 GENERAL APTITUDE PREP';

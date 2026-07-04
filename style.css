@@ -37,6 +37,11 @@
   --gen-blue: hsl(224, 100%, 65%);
   --gen-blue-bg: hsla(224, 100%, 65%, 0.08);
   --gen-blue-border: hsla(224, 100%, 65%, 0.3);
+
+  --acc-red: hsl(355, 85%, 52%);
+  --acc-red-bg: hsla(355, 85%, 52%, 0.08);
+  --acc-red-border: hsla(355, 85%, 52%, 0.3);
+  --acc-red-glow: hsla(355, 85%, 52%, 0.15);
   
   /* Shared UI colors */
   --blue: hsl(224, 100%, 65%);
@@ -170,6 +175,7 @@ body {
 .exam-card.ey::before { background: linear-gradient(90deg, var(--ey-gold), #ffd466); }
 .exam-card.sep::before { background: linear-gradient(90deg, var(--sep-green), #00ffd0); }
 .exam-card.gen::before { background: linear-gradient(90deg, var(--gen-blue), #669cff); }
+.exam-card.acc::before { background: linear-gradient(90deg, var(--acc-red), #ff7979); }
 
 .exam-card:hover {
   border-color: var(--border-hover);
@@ -180,6 +186,7 @@ body {
 .exam-card.ey:hover { border-color: var(--ey-gold-border); background: rgba(246, 168, 0, 0.02); }
 .exam-card.sep:hover { border-color: var(--sep-green-border); background: rgba(0, 200, 150, 0.02); }
 .exam-card.gen:hover { border-color: var(--gen-blue-border); background: rgba(30, 64, 175, 0.02); }
+.exam-card.acc:hover { border-color: var(--acc-red-border); background: var(--acc-red-glow); }
 
 .ec-logo {
   font-size: 2.5rem;
@@ -195,6 +202,7 @@ body {
 .exam-card.ey .ec-name { color: var(--ey-gold); }
 .exam-card.sep .ec-name { color: var(--sep-green); }
 .exam-card.gen .ec-name { color: var(--gen-blue); }
+.exam-card.acc .ec-name { color: var(--acc-red); }
 
 .ec-desc {
   font-size: 0.9rem;
@@ -221,6 +229,7 @@ body {
 .exam-card.ey .ec-tag { background: var(--ey-gold-bg); color: var(--ey-gold); border: 1px solid var(--ey-gold-border); }
 .exam-card.sep .ec-tag { background: var(--sep-green-bg); color: var(--sep-green); border: 1px solid var(--sep-green-border); }
 .exam-card.gen .ec-tag { background: var(--gen-blue-bg); color: var(--gen-blue); border: 1px solid var(--gen-blue-border); }
+.exam-card.acc .ec-tag { background: var(--acc-red-bg); color: var(--acc-red); border: 1px solid var(--acc-red-border); }
 
 /* ── HOME SCREEN ── */
 .home-header {
@@ -264,6 +273,7 @@ body {
 .exam-badge.ey { background: var(--ey-gold-bg); color: var(--ey-gold); border: 1px solid var(--ey-gold-border); }
 .exam-badge.sep { background: var(--sep-green-bg); color: var(--sep-green); border: 1px solid var(--sep-green-border); }
 .exam-badge.gen { background: var(--gen-blue-bg); color: var(--gen-blue); border: 1px solid var(--gen-blue-border); }
+.exam-badge.acc { background: var(--acc-red-bg); color: var(--acc-red); border: 1px solid var(--acc-red-border); }
 
 .app-title {
   font-size: 2rem;

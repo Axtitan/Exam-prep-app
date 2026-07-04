@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Exam Prep System — EY & SEPLAT</title>
-  <meta name="description" content="Practice for EY and SEPLAT aptitude exams with 300+ questions, timed tests, and full answer explanations.">
+  <title>Exam Prep System — EY, SEPLAT & Access Bank</title>
+  <meta name="description" content="Practice for EY, SEPLAT, Access Bank and General aptitude exams with 500+ questions, timed tests, and full answer explanations.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -38,6 +38,13 @@
             <div class="ec-desc">Workforce aptitude assessment. Covers Numerical and Verbal Reasoning sections extracted from official exam papers.</div>
             <div class="ec-meta">90 questions · Practice & Timed</div>
             <div class="ec-tag">WORKFORCE APTITUDE</div>
+          </div>
+          <div class="exam-card acc" onclick="selectExam('access')" id="card-access">
+            <div class="ec-logo">🔴</div>
+            <div class="ec-name">Access Bank</div>
+            <div class="ec-desc">Access Bank Graduate Trainee &amp; Front Liners aptitude test. Covers Quantitative, Verbal, Critical Reasoning, Intelligence &amp; Patterns, and General Bank Awareness.</div>
+            <div class="ec-meta">138 questions · Multiple modes</div>
+            <div class="ec-tag">GRADUATE TRAINEE</div>
           </div>
         </div>
       </div>
@@ -163,6 +170,7 @@
 
   <!-- Load script database first, then app controller -->
   <script src="questions.js"></script>
+  <script src="access_bank_questions.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
