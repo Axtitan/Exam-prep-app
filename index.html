@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Graduate Trainee Exam Prep</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<button class="theme-btn" id="theme-btn" onclick="toggleTheme()" aria-label="Switch between light and dark mode">
+  <span id="theme-icon">◐</span><span class="theme-label" id="theme-label">Dark</span>
+</button>
+
+<!-- ══════════════════ EXAM SELECTION ══════════════════ -->
+<section class="screen active" id="s-select">
+  <div class="wrap wrap-wide">
+    <header class="masthead">
+      <p class="eyebrow">Aptitude test preparation</p>
+      <h1 class="display">Graduate Trainee<br>Exam Prep</h1>
+      <p class="lede">Practise with real past questions from five graduate recruitment tests.
+        Full explanations, timed exam simulations and instant scoring.</p>
+      <div class="stat-strip" id="stat-strip"></div>
+    </header>
+
+    <h2 class="section-title">Choose your exam</h2>
+    <div class="exam-grid">
+
+      <button class="exam-card fb" onclick="selectExam('firstbank')">
+        <span class="ribbon">New</span>
+        <span class="ec-icon">🏦</span>
+        <span class="ec-name">First Bank</span>
+        <span class="ec-count" id="cnt-fb">—</span>
+        <span class="ec-desc">Critical, Verbal, Abstract &amp; Numerical Reasoning with every figure and data table.</span>
+        <span class="ec-go">Start practising →</span>
+      </button>
+
+      <button class="exam-card ey" onclick="selectExam('ey')">
+        <span class="ec-icon">📊</span>
+        <span class="ec-name">EY</span>
+        <span class="ec-count" id="cnt-ey">—</span>
+        <span class="ec-desc">Logical, Numerical, Verbal and Critical Reasoning from the EY graduate assessment.</span>
+        <span class="ec-go">Start practising →</span>
+      </button>
+
+      <button class="exam-card sep" onclick="selectExam('seplat')">
+        <span class="ec-icon">⛽</span>
+        <span class="ec-name">SEPLAT</span>
+        <span class="ec-count" id="cnt-sep">—</span>
+        <span class="ec-desc">Numerical, Quantitative and Verbal Reasoning plus Banking, Finance and General Knowledge.</span>
+        <span class="ec-go">Start practising →</span>
+      </button>
+
+      <button class="exam-card acc" onclick="selectExam('access')">
+        <span class="ec-icon">🔺</span>
+        <span class="ec-name">Access Bank</span>
+        <span class="ec-count" id="cnt-acc">—</span>
+        <span class="ec-desc">Quantitative and Verbal Reasoning, pattern recognition and general knowledge.</span>
+        <span class="ec-go">Start practising →</span>
+      </button>
+
+      <button class="exam-card gen" onclick="selectExam('general')">
+        <span class="ec-icon">🎯</span>
+        <span class="ec-name">General Aptitude</span>
+        <span class="ec-count" id="cnt-gen">—</span>
+        <span class="ec-desc">Workforce-style Numerical and Verbal Reasoning practice for any graduate trainee test.</span>
+        <span class="ec-go">Start practising →</span>
+      </button>
+
+    </div>
+
+    <div class="tips">
+      <h3>How to get the most out of this</h3>
+      <ul>
+        <li><strong>Start in Practice Mode.</strong> No clock, and you see the full explanation after every answer.</li>
+        <li><strong>Then go timed.</strong> Speed is what most candidates actually fail on.</li>
+        <li><strong>Filter by category</strong> to drill your weakest topic instead of re-doing what you already know.</li>
+        <li><strong>Read every explanation</strong>, including the ones you got right — the reasoning repeats across papers.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ HOME / MODE PICKER ══════════════════ -->
+<section class="screen" id="s-home">
+  <div class="wrap">
+    <button class="back-link" onclick="goToSelect()">← All exams</button>
+    <span class="exam-badge" id="home-badge"></span>
+    <h1 id="home-title">Practice</h1>
+    <p class="lede" id="home-sub"></p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Filter by category</h2>
+        <p class="panel-note">Leave “All” selected to mix every topic.</p>
+      </div>
+      <div class="chips" id="home-cats"></div>
+    </div>
+
+    <h2 class="section-title">Pick a mode</h2>
+    <div class="mode-grid" id="mode-grid"></div>
+
+    <div class="home-btns" id="home-btns"></div>
+  </div>
+</section>
+
+<!-- ══════════════════ QUIZ ══════════════════ -->
+<section class="screen" id="s-quiz">
+  <div class="quiz-bar">
+    <div class="wrap quiz-bar-in">
+      <div class="qb-left">
+        <span class="q-counter" id="q-counter">Question 1 of 50</span>
+        <div class="prog"><div class="prog-fill" id="prog-fill"></div></div>
+      </div>
+      <div class="qb-right">
+        <div class="score-pills">
+          <span class="pill ok"><b id="s-correct">0</b> right</span>
+          <span class="pill err"><b id="s-wrong">0</b> wrong</span>
+          <span class="pill"><b id="s-remain">0</b> left</span>
+        </div>
+        <span class="timer-box" id="timer">00:00</span>
+        <button class="btn-icon" id="pause-btn" onclick="togglePause()">⏸ Pause</button>
+        <button class="btn-icon danger" onclick="confirmCancel()">End</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap quiz-body">
+    <article class="q-card">
+      <span class="q-tag" id="q-tag">Category</span>
+
+      <details class="passage" id="q-passage">
+        <summary><span class="passage-label">Passage / data brief</span><span class="passage-hint">tap to read</span></summary>
+        <div class="passage-body" id="q-passage-body"></div>
+      </details>
+
+      <h2 class="q-text" id="q-text"></h2>
+
+      <figure class="q-chart" id="q-chart">
+        <figcaption class="chart-head">
+          <span id="q-chart-label">Figure</span>
+          <button class="chart-zoom" onclick="toggleChart()">⤢ Zoom</button>
+        </figcaption>
+        <img id="q-chart-img" alt="Figure or data table for this question" onclick="toggleChart()">
+      </figure>
+
+      <div class="opts" id="opts"></div>
+
+      <div class="exp-box" id="exp-box">
+        <button class="exp-header" id="exp-header" onclick="toggleExp()">
+          <span class="exp-icon" id="exp-icon">✓</span>
+          <span class="exp-title" id="exp-title">Explanation</span>
+          <span class="exp-toggle" id="exp-toggle">▾</span>
+        </button>
+        <div class="exp-body" id="exp-body"></div>
+      </div>
+
+      <div class="ai-launch">
+        <button class="btn ghost" id="ai-chat-btn" onclick="openAiChat()">💬 Ask the AI tutor about this question</button>
+      </div>
+
+      <div class="ai-chat" id="ai-chat">
+        <div class="ai-head">
+          <span class="ai-title">AI tutor</span>
+          <button class="btn-icon" id="ai-chat-toggle-btn" onclick="toggleAiChat()">▾ Hide</button>
+        </div>
+        <div class="ai-messages" id="ai-messages"></div>
+        <div class="ai-input-row">
+          <input id="ai-input" type="text" placeholder="Why is this the answer?" onkeydown="if(event.key==='Enter')sendAiMsg()">
+          <button class="btn primary" id="ai-send" onclick="sendAiMsg()">Send</button>
+        </div>
+      </div>
+    </article>
+
+    <nav class="q-nav">
+      <button class="btn" id="btn-prev" onclick="go(-1)">← Previous</button>
+      <button class="btn ghost" id="btn-skip" onclick="skip()">Skip</button>
+      <button class="btn primary" id="btn-next" onclick="go(1)">Next →</button>
+    </nav>
+
+    <details class="dots-panel">
+      <summary>Question navigator</summary>
+      <div class="dots" id="dots"></div>
+      <p class="kbd-hint">Tip: press <kbd>A</kbd>–<kbd>E</kbd> or <kbd>1</kbd>–<kbd>5</kbd> to answer, <kbd>←</kbd> <kbd>→</kbd> to move.</p>
+    </details>
+  </div>
+</section>
+
+<!-- ══════════════════ RESULT ══════════════════ -->
+<section class="screen" id="s-result">
+  <div class="wrap">
+    <div class="result-head">
+      <div class="score-ring" id="score-ring"><span id="r-pct">0%</span></div>
+      <div>
+        <p class="eyebrow" id="r-mode-label"></p>
+        <h1 id="r-grade">Result</h1>
+        <p class="lede" id="r-msg"></p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2 class="panel-title">Category breakdown</h2></div>
+      <div id="r-breakdown"></div>
+    </div>
+
+    <div class="home-btns">
+      <button class="btn primary" onclick="reviewMode()">Review answers</button>
+      <button class="btn" onclick="goHome()">New session</button>
+      <button class="btn ghost" onclick="goToSelect()">Change exam</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ OVERLAYS ══════════════════ -->
+<div class="overlay" id="pause-overlay">
+  <div class="modal">
+    <h2>Paused</h2>
+    <p class="modal-time" id="pause-time-display">00:00</p>
+    <p>Your timer is stopped. Take a breath — nothing is lost.</p>
+    <button class="btn primary" onclick="togglePause()">▶ Resume</button>
+  </div>
+</div>
+
+<div class="overlay" id="cancel-overlay">
+  <div class="modal">
+    <h2>End this assessment?</h2>
+    <p>You’ll go straight to your results. Unanswered questions count as skipped.</p>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeCancelOverlay()">Keep going</button>
+      <button class="btn danger" onclick="cancelAssessment()">End &amp; see results</button>
+    </div>
+  </div>
+</div>
+
+<script src="questions.js"></script>
+<script src="access_bank_questions.js"></script>
+<script src="first_bank_questions.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
