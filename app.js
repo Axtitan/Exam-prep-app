@@ -18,6 +18,7 @@ function selectExam(exam) {
        : exam === 'ey' ? EY_BANK
        : exam === 'seplat' ? SEPLAT_BANK
        : exam === 'access' ? ACCESS_BANK
+       : exam === 'gtbank' ? GTBANK
        : GENERAL_APTITUDE_BANK;
   CATS = [...new Set(BANK.map(q=>q.cat))];
   selectedCats.clear();
@@ -29,6 +30,7 @@ function selectExam(exam) {
        : exam === 'ey' ? '--ey-gold'
        : exam === 'seplat' ? '--sep-green'
        : exam === 'access' ? '--acc-red'
+       : exam === 'gtbank' ? '--gtb-orange'
        : '--gen-blue';
   document.documentElement.style.setProperty('--accent', `var(${accentProp})`);
 
@@ -41,6 +43,18 @@ function selectExam(exam) {
       {m:'timed',mins:60,badge:'⏱ 60 MIN EXAM',badgeCls:'timed',title:'Standard Exam',sub:'60 minutes. Mirrors real First Bank test conditions.'},
       {m:'timed',mins:90,badge:'🕐 90 MIN MODE',badgeCls:'timed',title:'Extended Exam',sub:'90 minutes for a full-length, deeper practice session.'},
       {m:'blitz',mins:30,badge:'🔥 30 MIN BLITZ',badgeCls:'fast',title:'Speed Mode',sub:'30 minutes, maximum pressure. Build exam speed.'},
+      {m:'free',mins:0,badge:'📖 PRACTICE',badgeCls:'practice',title:'Practice Mode',sub:'No clock. Full explanations after every answer.'},
+    ]);
+    document.getElementById('home-btns').innerHTML = `<button class="btn primary" onclick="startQuiz('timed',60)">Start 60-min Exam</button><button class="btn" onclick="startQuiz('free',0)">Practice Mode</button>`;
+  } else if(exam === 'gtbank') {
+    badge.className = 'exam-badge gtb';
+    badge.innerHTML = '🟠 GTBANK / GTCO ENTRY LEVEL PREP';
+    title.textContent = 'GTBank Assessment Practice';
+    sub.textContent = `${GTBANK.length} questions from GTBank/GTCO past papers and real assessment screenshots — Numerical, Verbal, Critical and Abstract Reasoning, with every figure included and every answer verified with a worked explanation. Each session draws ${SESSION_SIZE} random questions.`;
+    buildModeGrid([
+      {m:'timed',mins:60,badge:'⏱ 60 MIN EXAM',badgeCls:'timed',title:'Standard Exam',sub:'60 minutes. Mirrors real GTBank test conditions.'},
+      {m:'timed',mins:45,badge:'🔥 45 MIN BLITZ',badgeCls:'fast',title:'Speed Mode',sub:'45 minutes, maximum pressure. Build exam speed.'},
+      {m:'timed',mins:90,badge:'🕐 90 MIN MODE',badgeCls:'timed',title:'Extended Exam',sub:'90 minutes for a full-length, deeper practice session.'},
       {m:'free',mins:0,badge:'📖 PRACTICE',badgeCls:'practice',title:'Practice Mode',sub:'No clock. Full explanations after every answer.'},
     ]);
     document.getElementById('home-btns').innerHTML = `<button class="btn primary" onclick="startQuiz('timed',60)">Start 60-min Exam</button><button class="btn" onclick="startQuiz('free',0)">Practice Mode</button>`;
@@ -289,7 +303,7 @@ function go(dir) {
 }
 function skip(){ skipped.add(cur); if(cur<qs.length-1) cur++; render(); }
 
-// ─── RESULT ───────────────────────────────────────────────────────────────────
+// ─── RESULT ───────────────────��───────────────────────────────────────────────
 function showResult() {
   if(timerInterval){ clearInterval(timerInterval); }
   if(paused){ togglePause(); }
@@ -539,6 +553,7 @@ document.addEventListener('keydown', e => {
     ['cnt-ey', typeof EY_BANK!=='undefined'?EY_BANK:[]],
     ['cnt-sep', typeof SEPLAT_BANK!=='undefined'?SEPLAT_BANK:[]],
     ['cnt-acc', typeof ACCESS_BANK!=='undefined'?ACCESS_BANK:[]],
+    ['cnt-gtb', typeof GTBANK!=='undefined'?GTBANK:[]],
     ['cnt-gen', typeof GENERAL_APTITUDE_BANK!=='undefined'?GENERAL_APTITUDE_BANK:[]],
   ];
   ALL.forEach(([id,bank])=>{

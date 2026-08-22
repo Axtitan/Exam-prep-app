@@ -21,13 +21,22 @@
     <header class="masthead">
       <p class="eyebrow">Aptitude test preparation</p>
       <h1 class="display">Graduate Trainee<br>Exam Prep</h1>
-      <p class="lede">Practise with real past questions from five graduate recruitment tests.
+      <p class="lede">Practise with real past questions from six graduate recruitment tests.
         Full explanations, timed exam simulations and instant scoring.</p>
       <div class="stat-strip" id="stat-strip"></div>
     </header>
 
     <h2 class="section-title">Choose your exam</h2>
     <div class="exam-grid">
+
+      <button class="exam-card gtb" onclick="selectExam('gtbank')">
+        <span class="ribbon">New</span>
+        <span class="ec-icon">🟠</span>
+        <span class="ec-name">GTBank</span>
+        <span class="ec-count" id="cnt-gtb">—</span>
+        <span class="ec-desc">GTBank/GTCO entry-level past questions: Numerical, Verbal, Critical &amp; Abstract Reasoning with figures.</span>
+        <span class="ec-go">Start practising →</span>
+      </button>
 
       <button class="exam-card fb" onclick="selectExam('firstbank')">
         <span class="ribbon">New</span>
@@ -238,6 +247,7 @@
 <script src="questions.js"></script>
 <script src="access_bank_questions.js"></script>
 <script src="first_bank_questions.js"></script>
+<script src="gtbank_questions.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
