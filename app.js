@@ -19,6 +19,7 @@ function selectExam(exam) {
        : exam === 'seplat' ? SEPLAT_BANK
        : exam === 'access' ? ACCESS_BANK
        : exam === 'gtbank' ? GTBANK
+       : exam === 'premiumtrust' ? PREMIUM_TRUST
        : GENERAL_APTITUDE_BANK;
   CATS = [...new Set(BANK.map(q=>q.cat))];
   selectedCats.clear();
@@ -31,6 +32,7 @@ function selectExam(exam) {
        : exam === 'seplat' ? '--sep-green'
        : exam === 'access' ? '--acc-red'
        : exam === 'gtbank' ? '--gtb-orange'
+       : exam === 'premiumtrust' ? '--ptb-teal'
        : '--gen-blue';
   document.documentElement.style.setProperty('--accent', `var(${accentProp})`);
 
@@ -53,6 +55,18 @@ function selectExam(exam) {
     sub.textContent = `${GTBANK.length} questions from GTBank/GTCO past papers and real assessment screenshots — Numerical, Verbal, Critical and Abstract Reasoning, with every figure included and every answer verified with a worked explanation. Each session draws ${SESSION_SIZE} random questions.`;
     buildModeGrid([
       {m:'timed',mins:60,badge:'⏱ 60 MIN EXAM',badgeCls:'timed',title:'Standard Exam',sub:'60 minutes. Mirrors real GTBank test conditions.'},
+      {m:'timed',mins:45,badge:'🔥 45 MIN BLITZ',badgeCls:'fast',title:'Speed Mode',sub:'45 minutes, maximum pressure. Build exam speed.'},
+      {m:'timed',mins:90,badge:'🕐 90 MIN MODE',badgeCls:'timed',title:'Extended Exam',sub:'90 minutes for a full-length, deeper practice session.'},
+      {m:'free',mins:0,badge:'📖 PRACTICE',badgeCls:'practice',title:'Practice Mode',sub:'No clock. Full explanations after every answer.'},
+    ]);
+    document.getElementById('home-btns').innerHTML = `<button class="btn primary" onclick="startQuiz('timed',60)">Start 60-min Exam</button><button class="btn" onclick="startQuiz('free',0)">Practice Mode</button>`;
+  } else if(exam === 'premiumtrust') {
+    badge.className = 'exam-badge ptb';
+    badge.innerHTML = '💎 PREMIUM TRUST BANK GRADUATE TRAINEE PREP';
+    title.textContent = 'Premium Trust Bank Assessment Practice';
+    sub.textContent = `${PREMIUM_TRUST.length} questions from Premium Trust Bank graduate trainee past papers — Numerical, Verbal, Abstract, Logical & Critical Reasoning, Banking/Economics and ICT. Every answer key entry was crosschecked (and corrected where wrong), with a worked explanation for every question. Each session draws ${SESSION_SIZE} random questions.`;
+    buildModeGrid([
+      {m:'timed',mins:60,badge:'⏱ 60 MIN EXAM',badgeCls:'timed',title:'Standard Exam',sub:'60 minutes. Mirrors real test conditions.'},
       {m:'timed',mins:45,badge:'🔥 45 MIN BLITZ',badgeCls:'fast',title:'Speed Mode',sub:'45 minutes, maximum pressure. Build exam speed.'},
       {m:'timed',mins:90,badge:'🕐 90 MIN MODE',badgeCls:'timed',title:'Extended Exam',sub:'90 minutes for a full-length, deeper practice session.'},
       {m:'free',mins:0,badge:'📖 PRACTICE',badgeCls:'practice',title:'Practice Mode',sub:'No clock. Full explanations after every answer.'},
@@ -407,13 +421,14 @@ async function sendAiMsg(){
   if(aiChatLocked||!aiChatQ) return;
   const input=document.getElementById('ai-input'), sendBtn=document.getElementById('ai-send');
   const userText=input.value.trim(); if(!userText) return;
+  if(userText.toLowerCase()==='reset key'){ localStorage.removeItem('GROQ_API_KEY'); addAiMsg('ai','Saved Groq key cleared. Send any message and I will ask you for a new key.'); return; }
   input.value=''; aiChatLocked=true; sendBtn.disabled=true; sendBtn.textContent='...';
   addAiMsg('user',userText);
   const thinkEl=addAiMsg('thinking','Thinking…');
   const q=aiChatQ, keys=['A','B','C','D','E'];
   const optsText=q.opts.map((o,i)=>`${keys[i]}: ${o}`).join('\n');
   const correctLetter=keys[q.ans], correctText=q.opts[q.ans];
-  const systemPrompt=`You are a concise exam tutor helping a student prepare for the ${({firstbank:'First Bank graduate trainee',ey:'EY graduate aptitude',seplat:'SEPLAT petroleum company',access:'Access Bank graduate trainee'})[currentExam]||'Workforce general aptitude'} exam.
+  const systemPrompt=`You are a concise exam tutor helping a student prepare for the ${({firstbank:'First Bank graduate trainee',ey:'EY graduate aptitude',seplat:'SEPLAT petroleum company',access:'Access Bank graduate trainee',gtbank:'GTBank/GTCO entry-level recruitment',premiumtrust:'Premium Trust Bank graduate trainee'})[currentExam]||'Workforce general aptitude'} exam.
 The student has just answered a question. Your job is to explain the reasoning clearly and directly.
 
 QUESTION:
@@ -449,15 +464,18 @@ RULES:
     }
   }
 
-  try {
-    const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+  const MODELS=['openai/gpt-oss-120b','openai/gpt-oss-20b','qwen/qwen3.6-27b'];
+  let res=null, data=null, lastErr='';
+  for (const model of MODELS) {
+    try {
+      res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
         'Authorization':`Bearer ${apiKey}`
       },
       body:JSON.stringify({
-        model:'llama-3.3-70b-versatile',
+        model:model,
         messages:[
           {role:'system',content:systemPrompt},
           ...aiChatHistory
@@ -466,15 +484,34 @@ RULES:
         max_tokens:512
       })
     });
-    const data=await res.json();
-    const reply=data.choices&&data.choices[0]&&data.choices[0].message?data.choices[0].message.content:'Sorry, could not get a response from Groq. Please try again.';
+      const txt=await res.text();
+      try{ data=JSON.parse(txt); }catch(e){ data=null; lastErr='Non-JSON response: '+txt.slice(0,200); }
+      if(res.ok && data && data.choices) break;
+      lastErr = (data&&data.error&&data.error.message)?data.error.message:('HTTP '+res.status);
+      if(res.status===401||res.status===403) break;
+      res=null;
+    } catch(e) { lastErr=e.message||'network error'; res=null; }
+  }
+  if(!res){
+  if(res && (res.status===401||res.status===403)){
+      localStorage.removeItem('GROQ_API_KEY');
+      thinkEl.remove(); addAiMsg('ai','That saved Groq API key was rejected, so I cleared it. Press Send again and I will ask you for a fresh key.');
+      aiChatLocked=false; sendBtn.disabled=false; sendBtn.textContent='Ask'; input.focus();
+      return;
+    }
+    thinkEl.remove(); addAiMsg('ai','Groq could not answer after trying several models. Error: '+lastErr+' — you can type reset key to enter a fresh key.');
+    aiChatLocked=false; sendBtn.disabled=false; sendBtn.textContent='Ask'; input.focus();
+    return;
+  }
+  { // success path
+    if(false){
+    }
+    const reply=data.choices&&data.choices[0]&&data.choices[0].message?data.choices[0].message.content:('Unexpected Groq response: '+JSON.stringify(data).slice(0,200));
     thinkEl.remove(); addAiMsg('ai',reply);
     aiChatHistory.push({role:'assistant',content:reply});
     
     CHAT_STORE[qKey] = aiChatHistory;
     localStorage.setItem(CHAT_STORE_KEY, JSON.stringify(CHAT_STORE));
-  } catch(e) {
-    thinkEl.remove(); addAiMsg('ai','Connection error. Please check your internet or API key and try again.');
   }
   aiChatLocked=false; sendBtn.disabled=false; sendBtn.textContent='Ask'; input.focus();
 }
@@ -554,6 +591,7 @@ document.addEventListener('keydown', e => {
     ['cnt-sep', typeof SEPLAT_BANK!=='undefined'?SEPLAT_BANK:[]],
     ['cnt-acc', typeof ACCESS_BANK!=='undefined'?ACCESS_BANK:[]],
     ['cnt-gtb', typeof GTBANK!=='undefined'?GTBANK:[]],
+    ['cnt-ptb', typeof PREMIUM_TRUST!=='undefined'?PREMIUM_TRUST:[]],
     ['cnt-gen', typeof GENERAL_APTITUDE_BANK!=='undefined'?GENERAL_APTITUDE_BANK:[]],
   ];
   ALL.forEach(([id,bank])=>{

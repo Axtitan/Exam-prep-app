@@ -21,6 +21,7 @@
   --gen-blue:#1F6FBF;
   --fb-blue:#14509E;
   --gtb-orange:#C25E10;
+  --ptb-teal:#0E7C7B;
 
   --accent:var(--blue);
   --radius:8px;
@@ -50,6 +51,7 @@
   --gen-blue:#5E9FE8;
   --fb-blue:#8AB8F2;
   --gtb-orange:#F08A3C;
+  --ptb-teal:#4ECDC4;
 
   --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.3);
   --shadow-lg:0 2px 4px rgba(0,0,0,.5), 0 12px 32px rgba(0,0,0,.45);
@@ -131,6 +133,7 @@ h1{font-size:clamp(1.6rem,3.4vw,2.1rem);line-height:1.25;font-weight:700;letter-
 .exam-card.acc{--card-accent:var(--acc-red)}
 .exam-card.gen{--card-accent:var(--gen-blue)}
 .exam-card.gtb{--card-accent:var(--gtb-orange)}
+.exam-card.ptb{--card-accent:var(--ptb-teal)}
 .ec-icon{font-size:26px;line-height:1}
 .ec-name{font-size:20px;font-weight:700;letter-spacing:-.01em}
 .ec-count{font-size:14px;font-weight:600;color:var(--card-accent)}
@@ -172,6 +175,7 @@ h1{font-size:clamp(1.6rem,3.4vw,2.1rem);line-height:1.25;font-weight:700;letter-
 .exam-badge.acc{background:var(--red-bg);color:var(--acc-red)}
 .exam-badge.gen{background:var(--blue-bg);color:var(--gen-blue)}
 .exam-badge.gtb{background:var(--amber-bg);color:var(--gtb-orange)}
+.exam-badge.ptb{background:var(--green-bg);color:var(--ptb-teal)}
 
 /* ── panels ── */
 .panel{
