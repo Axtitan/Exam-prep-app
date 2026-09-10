@@ -645,7 +645,24 @@ function renderAcFramework(){
 
 function renderAcCases(){
   return `<div class="ac-note">Read the scenario, then <b>write your own answer using the 5-step framework before opening the model answer</b>. Your written answer may feed the group discussion — write it to defend it out loud.</div>` +
-    AC_CONTENT.cases.map(c => `
+    AC_CONTENT.cases.map(c => {
+      const a = c.answer;
+      let inner = `<h4>1 · Clarify the problem</h4><p>${a.clarify}</p><h4>2 · Find the root cause</h4><p>${a.root}</p>`;
+      let n = 3;
+      if(a.options){
+        inner += `<h4>${n} · Options &amp; trade-offs</h4>` + a.options.map(o => `<div class="ac-opt"><b>${o.name}</b><span>✅ ${o.pros}</span><span>⚠️ ${o.cons}</span></div>`).join('');
+        n++;
+      }
+      if(a.qa){
+        inner += a.qa.map(q => `<h4>${n} · ${q.q}</h4><p>${q.a}</p>`).join('');
+        n += a.qa.length;
+      }
+      if(a.recommend){
+        inner += `<h4>${n} · Recommendation &amp; justification</h4><p>${a.recommend}</p>`;
+        n++;
+      }
+      inner += `<h4>${n} · Risk &amp; execution — what could go wrong</h4><p>${a.risk}</p>`;
+      return `
     <div class="ac-case">
       <span class="ac-case-tag">${c.tag}</span>
       <h3>${c.title}</h3>
@@ -653,16 +670,10 @@ function renderAcCases(){
       <table class="ac-data">${c.data.map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
       <p class="ac-task">Your task: ${c.task}</p>
       <details><summary>Show model answer (5-step framework)</summary>
-        <div class="ac-ans">
-          <h4>1 · Clarify the problem</h4><p>${c.answer.clarify}</p>
-          <h4>2 · Find the root cause</h4><p>${c.answer.root}</p>
-          <h4>3 · Options &amp; trade-offs</h4>
-          ${c.answer.options.map(o => `<div class="ac-opt"><b>${o.name}</b><span>✅ ${o.pros}</span><span>⚠️ ${o.cons}</span></div>`).join('')}
-          <h4>4 · Recommendation &amp; justification</h4><p>${c.answer.recommend}</p>
-          <h4>5 · Risk &amp; execution</h4><p>${c.answer.risk}</p>
-        </div>
+        <div class="ac-ans">${inner}</div>
       </details>
-    </div>`).join('');
+    </div>`;
+    }).join('');
 }
 
 function renderAcGroup(){

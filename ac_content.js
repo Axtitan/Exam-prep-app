@@ -66,6 +66,80 @@ cases: [
       recommend: "Option C. It fixes the root cause — the queue — where it matters most: small loans are the volume driver of the 55% abandonment, and automating them collapses turnaround toward the 48-hour competitor benchmark. Keeping human review above ₦25m protects the NPL ceiling. Measurably: abandonment should fall, turnaround should drop from 12 days toward 2–3, and NPL should hold at or below 3.5%. A is slower to value and riskier on credit quality; B is a recurring expense that leaves the structural problem intact.",
       risk: "Execution: pilot auto-scoring on one product/region for 90 days before scaling; set the ₦25m threshold with credit risk, not IT. Risks: model drift pushing up NPLs, staff resistance, data quality gaps. Mitigations: monthly model back-testing with override reporting, retrain officers into exception-review roles (headcount redeployed, not cut), and a kill-switch threshold — if pilot NPL exceeds 3.5%, auto-scoring pauses automatically. KPIs: turnaround time, abandonment rate, NPL ratio, approval rate, cost per loan."
     }
+  },
+  {
+    title: "FirstBank-style — Winning Over Mrs. Okonkwo (Balogun Market)",
+    tag: "Practice case · Relationship Management · individual",
+    scenario: [
+      "You've just been employed as a Relationship Manager after training school, inheriting a portfolio from a senior RM who was promoted to Branch Manager. Among the accounts is Mrs. Adaeze Okonkwo, who runs a fabric and textile business in Balogun market.",
+      "She has banked with you for six years with decent transaction volume — yet her file shows no product beyond a basic current account: no loan, no savings account, no card. When you call to introduce yourself she is polite but distant, says her previous RM “understood her business”, and asks, almost testing you: “so what can you actually do for me that he wasn't already doing?” Meanwhile, her transaction history shows a large share of supplier payments leaving as cash withdrawals rather than transfers — she may be paying some suppliers informally, outside the banking system."
+    ],
+    data: [
+      ["Relationship length", "6 years, decent volume"],
+      ["Products held", "Current account only — nothing else"],
+      ["Supplier payments", "Largely cash withdrawals, not transfers"],
+      ["Her stance", "Polite but distant; loyalty was to the previous RM"]
+    ],
+    task: "1) What does Mrs. Okonkwo's question actually reveal, and how would you respond in the moment? 2) What does the cash-withdrawal pattern tell you, and why does it matter for how you build the relationship?",
+    answer: {
+      clarify: "Client: Mrs. Okonkwo, a six-year SME customer inherited from a promoted RM. Tension: she is testing whether you see her as a person or a number, while the bank is leaving years of cross-sell value untouched. Decision: how to earn her confidence first, then grow the relationship.",
+      root: "Her test question reveals two things: her loyalty was personal — to the RM, not the bank — and she suspects the handover is a downgrade. Six years with zero products also suggests nobody ever showed her concrete value, so product-pushing now would confirm her fear. The root issue is trust transfer, not product gaps.",
+      qa: [
+        { q: "Q1 — What her question reveals & your in-the-moment response", a: "It reveals she is measuring respect and competence, not features. So do not pitch. Disarm the test with honesty: “Truthfully, madam — today, probably nothing. He knew your business, and I'd be pretending if I claimed to already understand it the way he did. What I can do is learn it properly, starting with what he got right — and I'd rather do that at your shop than on this call.” Humility plus curiosity wins the moment; a product list loses it. Then follow through within days: a visit to her shop at Balogun, no sales agenda." },
+        { q: "Q2 — What the cash pattern tells you & why it matters", a: "Cash-heavy supplier payments mean part of her supply chain is informal. Three implications: (1) Opportunity — she carries cash-handling risk and cost, and builds no credit history from those flows, which she will need the day she wants to expand. (2) Insight — her trade runs on trust and cash discipline; any advice must fit that rhythm, not fight it. (3) Protection — large recurrent cash withdrawals attract compliance attention; formalising her payments protects her account. It matters because this is the door to the real conversation — helping her formalise gradually builds both her credit profile and your credibility. But never frame it as “you're doing it wrong”: her suppliers may demand cash. Understand the chain first, then pilot transfers with one or two willing suppliers." }
+      ],
+      risk: "What I'd watch out for: don't push any product before you understand her cash cycle; don't over-promise availability you can't sustain; and expect supplier resistance to transfers — if the pilot fails, pause rather than pressure, because a failed first initiative with a distrustful client sets the relationship back further than no initiative at all. Track: visit cadence kept, share of supplier payments moving to transfer, and whether she starts asking YOU questions — the real sign the trust has transferred."
+    }
+  },
+  {
+    title: "Century Bank — Rebuilding Mr. Vincent's Trust",
+    tag: "Practice case · From your notes · RM presentation to BM",
+    scenario: [
+      "Mr. Vincent runs an agro-feed business posting ₦100m annual credit turnover, banking mainly through a Zenith savings account. Advised to open a corporate account with a big-five bank serving his suppliers (OLAMS, Lagos), he had reservations: as a corps member he held a Century Bank savings account which he abandoned after a failed POS transaction was never properly processed or refunded — and he had seen bad service reviews about the bank on social media.",
+      "The persistence of his old friend Mr. Udeme, a Century Bank RM, convinced him to open the corporate account. The account was opened — then Udeme resigned and relocated to Canada with his family, and the account was handed over to you, a new RM. You are to present to your Branch Manager the key initiatives you will deploy."
+    ],
+    data: [
+      ["Business", "Agro-feed, ₦100m annual credit turnover"],
+      ["Wound 1 — personal", "Failed POS transaction, never resolved or refunded"],
+      ["Wound 2 — reputational", "Bad service reviews on social media"],
+      ["The one bridge", "Udeme (his friend, the RM) just left for Canada"]
+    ],
+    task: "What relationship management strategy will you deploy to turn a negative experience into a positive one?",
+    answer: {
+      clarify: "Client: Century Bank; you are the incoming RM presenting to your BM. Situation: a ₦100m-turnover corporate account held together by a personal friendship that has just emigrated. Decision: the strategy to keep and grow this account by converting a negative history into a positive experience.",
+      root: "Say the real problem out loud first: Mr. Vincent did not leave because Century Bank is a bad bank — a POS transaction failed, nobody fixed it properly, and he was left holding the frustration with no resolution. That is not a product problem; it is a trust problem. And it is TWO wounds, not one: a personal experience (the unresolved POS refund) and a reputational doubt (social media reviews). Treat them as a single issue and you have already lost marks — you haven't understood the case.",
+      qa: [
+        { q: "Name and own the personal wound", a: "Acknowledge the POS failure openly — no pretending it didn't happen. People trust you more when you own a mistake than when you avoid it. Then give him a concrete reason to believe this time is different, not just words: a named direct line to you with a defined response SLA (and don't be quick to assure him you'll pick at any time — promise only what you can sustain), a written resolution timeline for any failed transaction, and a small gesture that shows the bank actually heard him." },
+        { q: "Treat the handover as the emergency it is", a: "The one relationship that made him trust this bank just walked out the door. Reach out proactively — before he asks “so who's handling my account now?” Ideally Udeme introduces you directly with a warm handover call. If you stay silent, you confirm his fear that the bank sees him as a number, not a person. Panelists listen for exactly this: the mechanics of how trust gets rebuilt, not the generic phrase “I would build trust.”" },
+        { q: "Address the reputational wound separately", a: "Don't argue with social media — outperform it. Invite him to judge the bank on his own dashboard: share your service commitments, report his issue-resolution metrics to him quarterly, and let consistent delivery quietly contradict the reviews. Over time, a client whose problems visibly get fixed becomes your counter-evidence — potentially even an advocate." }
+      ],
+      risk: "End with what could go wrong, because every solution has a cost: if you promise Mr. Vincent the world to win him over and then don't deliver, you haven't solved the trust problem — you've made it worse, permanently this time. So set only SLAs the branch can keep, escalate systemic failures rather than absorbing them personally, and watch the proof points: his resolution times, his transaction volume trend, and whether he begins referring other businesses — the true signal that trust has been rebuilt."
+    }
+  },
+  {
+    title: "Naija International Bank — Sarah's Bakery Expansion",
+    tag: "Practice case · Entry-level RM · individual",
+    scenario: [
+      "You are a newly employed Relationship Manager at Naija International Bank, assigned a portfolio of small business owners, individual investors and high-net-worth individuals. One client, Sarah, runs a local bakery and has banked with you for several years.",
+      "She wants to expand: new equipment, and possibly a second location. But she is worried about the risks of taking on debt and wants any decision to align with her long-term business goals."
+    ],
+    data: [
+      ["Client", "Sarah — local bakery, multi-year customer"],
+      ["Ambition", "New equipment + possible second location"],
+      ["Her concern", "Debt risk; decisions must fit long-term goals"],
+      ["Your role", "Entry-level RM — advise, don't just sell"]
+    ],
+    task: "1) How would you assess Sarah's financial situation? 2) What financing options would you present? 3) How would you build a long-term relationship beyond this transaction?",
+    answer: {
+      clarify: "Client: Sarah, a loyal SME owner at an expansion crossroads. Tension: growth requires capital, but she fears debt could endanger the business she's built. Decision: which financing — if any — to recommend, and how to become her long-term adviser rather than a one-transaction salesperson.",
+      root: "Her real question is not “can I get a loan?” — it is “will this debt put my business at risk?” She needs the decision de-risked with numbers, not a product pitch. An RM who answers the surface question sells a loan; an RM who answers the real question builds a client for decades.",
+      qa: [
+        { q: "Q1 — Assessing her financial situation", a: "Start from her own account data: turnover and cash-flow seasonality from her transaction history, average balances, existing obligations, and how much surplus the business generates monthly. Then sit with her: profit margins, the cost of the equipment, the revenue the equipment and second location would realistically add, and her personal goals. The key test: can projected cash flow service the debt with headroom — covering repayments comfortably even in her slow season?" },
+        { q: "Q2 — Financing options to present", a: "Present options with trade-offs, not one product. A — Asset/equipment finance for the machinery: the equipment secures the loan, repayments match its productive life, and her working capital stays intact. B — A working-capital overdraft: flexible and cheaper if the need is short-term, but wrong for long-lived assets and dangerous if it quietly becomes permanent debt. C — A phased plan: finance the equipment now, bank the improved cash flow, and revisit the second location after 6–12 months of proven numbers — possibly part-funded from retained profits to keep leverage low. Recommendation: C, built on A — it matches debt to the asset's life, respects her debt anxiety, and ties the bigger leap to evidence, not optimism." },
+        { q: "Q3 — Building the relationship beyond this transaction", a: "Schedule business reviews, not sales calls — quarterly, aligned to her baking calendar. Introduce products only when they solve a real problem she's expressed (a POS/collections solution as she grows, a savings vehicle for surplus, insurance for the new equipment). And be the RM who sometimes says “not yet” to a product that doesn't fit — the day your advice costs the bank a sale but saves her money is the day you become her banker for life." }
+      ],
+      risk: "What could go wrong: over-leveraging a good business, opening the second location before the first is systemised, and management attention splitting across two sites. Mitigations: size the loan to her slow-season cash flow, not her best month; set a 6-month post-expansion review; and watch the numbers — equipment utilisation, revenue per location, repayment behaviour — so trouble is caught months before it becomes default."
+    }
   }
 ],
 
