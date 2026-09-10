@@ -47,7 +47,7 @@ function selectExam(exam) {
       {m:'blitz',mins:30,badge:'🔥 30 MIN BLITZ',badgeCls:'fast',title:'Speed Mode',sub:'30 minutes, maximum pressure. Build exam speed.'},
       {m:'free',mins:0,badge:'📖 PRACTICE',badgeCls:'practice',title:'Practice Mode',sub:'No clock. Full explanations after every answer.'},
     ]);
-    document.getElementById('home-btns').innerHTML = `<button class="btn primary" onclick="startQuiz('timed',60)">Start 60-min Exam</button><button class="btn" onclick="startQuiz('free',0)">Practice Mode</button>`;
+    document.getElementById('home-btns').innerHTML = `<button class="btn primary" onclick="startQuiz('timed',60)">Start 60-min Exam</button><button class="btn" onclick="startQuiz('free',0)">Practice Mode</button><button class="btn ac-entry" onclick="openAssessmentCenter()">🎯 Assessment Center Prep</button>`;
   } else if(exam === 'gtbank') {
     badge.className = 'exam-badge gtb';
     badge.innerHTML = '🟠 GTBANK / GTCO ENTRY LEVEL PREP';
@@ -612,3 +612,96 @@ document.addEventListener('keydown', e => {
       '<div class="stat"><b>'+Math.round(withExp/total*100)+'%</b><span>with explanations</span></div>';
   }
 })();
+
+// ─── ASSESSMENT CENTER (First Bank) ─────────────────────────────────────────
+let acTab = 'framework';
+
+function openAssessmentCenter(){
+  if(typeof AC_CONTENT === 'undefined') return;
+  show('s-ac');
+  renderAc();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function setAcTab(t){ acTab = t; renderAc(); window.scrollTo({top:0, behavior:'smooth'}); }
+
+function renderAc(){
+  const tabs = [['framework','🧭 5-Step Framework'],['cases','📊 Case Studies'],['group','👥 Group Exercise'],['cbi','🎤 CBI Interview'],['presentation','🖥 Presentation']];
+  document.getElementById('ac-tabs').innerHTML = tabs.map(([k,l]) =>
+    `<button class="ac-tab${acTab===k?' active':''}" onclick="setAcTab('${k}')">${l}</button>`).join('');
+  const b = document.getElementById('ac-body');
+  if(acTab==='framework') b.innerHTML = renderAcFramework();
+  else if(acTab==='cases') b.innerHTML = renderAcCases();
+  else if(acTab==='group') b.innerHTML = renderAcGroup();
+  else if(acTab==='cbi') b.innerHTML = renderAcCbi();
+  else b.innerHTML = renderAcPres();
+}
+
+function renderAcFramework(){
+  const f = AC_CONTENT.framework;
+  return `<div class="ac-note"><b>${f.title}.</b> ${f.note}</div>` +
+    f.steps.map(s => `<div class="fw-step"><div class="fw-num">${s.n}</div><div><h3>${s.title}</h3><p>${s.body}</p></div></div>`).join('');
+}
+
+function renderAcCases(){
+  return `<div class="ac-note">Read the scenario, then <b>write your own answer using the 5-step framework before opening the model answer</b>. Your written answer may feed the group discussion — write it to defend it out loud.</div>` +
+    AC_CONTENT.cases.map(c => `
+    <div class="ac-case">
+      <span class="ac-case-tag">${c.tag}</span>
+      <h3>${c.title}</h3>
+      ${c.scenario.map(p => `<p>${p}</p>`).join('')}
+      <table class="ac-data">${c.data.map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
+      <p class="ac-task">Your task: ${c.task}</p>
+      <details><summary>Show model answer (5-step framework)</summary>
+        <div class="ac-ans">
+          <h4>1 · Clarify the problem</h4><p>${c.answer.clarify}</p>
+          <h4>2 · Find the root cause</h4><p>${c.answer.root}</p>
+          <h4>3 · Options &amp; trade-offs</h4>
+          ${c.answer.options.map(o => `<div class="ac-opt"><b>${o.name}</b><span>✅ ${o.pros}</span><span>⚠️ ${o.cons}</span></div>`).join('')}
+          <h4>4 · Recommendation &amp; justification</h4><p>${c.answer.recommend}</p>
+          <h4>5 · Risk &amp; execution</h4><p>${c.answer.risk}</p>
+        </div>
+      </details>
+    </div>`).join('');
+}
+
+function renderAcGroup(){
+  const g = AC_CONTENT.group;
+  return `
+    <div class="ac-note"><b>${g.title}.</b> ${g.scenario}</div>
+    <div class="ac-h">The three rules — commit these to memory</div>
+    <div class="ac-rules">
+      ${g.rules.map(r => `<div class="ac-rule"><div class="fw-num">${r.n}</div><div><h3>${r.title}</h3><p>${r.body}</p></div></div>`).join('')}
+    </div>
+    <div class="ac-h">What the assessors are watching for</div>
+    <div class="ac-chips">${g.criteria.map(c => `<span>${c}</span>`).join('')}</div>
+    <div class="ac-h">Phrases that score points</div>
+    ${g.powerPhrases.map(p => `<div class="ac-quote">${p}</div>`).join('')}
+    <div class="ac-h">What NOT to do</div>
+    <ul class="ac-list">${g.donts.map(d => `<li>${d}</li>`).join('')}</ul>`;
+}
+
+function renderAcCbi(){
+  const c = AC_CONTENT.cbi;
+  return `
+    <div class="ac-note"><b>${c.star.name}.</b> ${c.star.steps.map(([k,v]) => `<b>${k}</b> — ${v}`).join(' · ')}</div>
+    ${c.questions.map(q => `
+    <details class="ac-q">
+      <summary>${q.q}</summary>
+      <div class="ac-q-body">
+        <span class="ac-cmp">${q.competency}</span>
+        <ul class="ac-list">${q.how.map(h => `<li>${h}</li>`).join('')}</ul>
+        <div class="ac-avoid"><b>Avoid:</b> ${q.avoid}</div>
+      </div>
+    </details>`).join('')}`;
+}
+
+function renderAcPres(){
+  const p = AC_CONTENT.presentation;
+  return `
+    <div class="ac-note">${p.topic}</div>
+    <div class="ac-h">Suggested structure</div>
+    <ul class="ac-list">${p.structure.map(([k,v]) => `<li><b>${k}</b> — ${v}</li>`).join('')}</ul>
+    <div class="ac-h">Delivery tips</div>
+    <ul class="ac-list">${p.tips.map(t => `<li>${t}</li>`).join('')}</ul>`;
+}
