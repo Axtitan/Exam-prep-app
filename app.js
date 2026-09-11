@@ -669,6 +669,8 @@ function renderAcCases(){
       ${c.scenario.map(p => `<p>${p}</p>`).join('')}
       <table class="ac-data">${c.data.map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
       <p class="ac-task">Your task: ${c.task}</p>
+      ${c.assessors ? `<div class="ac-h" style="margin-top:14px">What the assessors are looking for</div><div class="ac-chips">${c.assessors.map(a => `<span>${a}</span>`).join('')}</div>` : ''}
+      ${c.strongApproach ? `<div class="ac-quote"><b>Strong approach (from the guide):</b> ${c.strongApproach}</div>` : ''}
       <details><summary>Show model answer (5-step framework)</summary>
         <div class="ac-ans">${inner}</div>
       </details>
