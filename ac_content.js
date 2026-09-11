@@ -19,16 +19,21 @@ cases: [
     title: "XYZBank — Digital Banking & Customer Experience",
     tag: "From your study guide · 30–45 min · individual",
     scenario: [
-      "XYZBank has seen digital banking usage grow strongly among young customers — but complaints about failed transactions, delayed reversals and confusing navigation have grown with it.",
-      "Management is weighing three options: Option A — improve the existing platform (upgrade the app, fix transaction processing, strengthen support) for ₦2.5bn. Option B — aggressive youth customer acquisition (promotions, campus partnerships, advertising) for ₦1.8bn. Option C — a combination (moderate tech upgrades + targeted acquisition + better service) for ₦2.2bn."
+      "XYZBank has noticed that the number of customers using its digital banking channels has increased significantly among young customers. However, customer complaints concerning failed transactions, delayed reversals and difficulty navigating some digital services have also increased.",
+      "Management is considering three possible approaches:",
+      "Option A — Improve the existing digital platform: Upgrade the mobile banking application. Improve transaction processing. Strengthen customer support. Estimated investment: ₦2.5 billion.",
+      "Option B — Aggressive customer acquisition: Introduce promotions and incentives for new digital customers. Partner with universities and youth organisations. Launch a major advertising campaign. Estimated investment: ₦1.8 billion.",
+      "Option C — Combination strategy: Moderate technology upgrades. Targeted customer acquisition. Improved customer service. Estimated investment: ₦2.2 billion."
     ],
     data: [
-      ["Monthly active digital customers", "4.0m → target 5.5m"],
-      ["Failed transactions", "6.5% → target below 3%"],
-      ["Avg. complaint resolution", "48 hours → target 12 hours"],
-      ["Customer satisfaction", "72% → target 85%"]
+      ["Monthly active digital customers", "Current 4.0m → Target 5.5m"],
+      ["Failed transactions", "Current 6.5% → Target below 3%"],
+      ["Average complaint resolution", "Current 48 hours → Target 12 hours"],
+      ["Customer satisfaction", "Current 72% → Target 85%"]
     ],
-    task: "Which option should management choose, why, what are the major risks, how should it be implemented, and which KPIs should be monitored?",
+    task: "You have 30 minutes to analyse the information. Prepare a recommendation addressing: 1. Which option should management choose? 2. Why did you choose it? 3. What are the major risks? 4. How should the strategy be implemented? 5. What KPIs should management monitor?",
+    assessors: ["Analytical thinking", "Numerical reasoning", "Problem solving", "Commercial awareness", "Decision-making", "Ability to prioritise", "Ability to justify your recommendation", "Communication"],
+    strongApproach: "Don't simply say “I recommend Option C because it is the cheapest.” Instead: “I recommend Option C because it provides a balanced response to both sides of the problem. Customer acquisition without addressing transaction failures could increase complaints, while focusing exclusively on technology could limit customer growth. A combination of targeted acquisition, moderate technology improvements and stronger customer support addresses both growth and customer experience.” Then identify measurable KPIs — failed transactions 6.5% → below 3%, customer satisfaction 72% → 85%, active digital customers 4m → 5.5m, complaint resolution 48 hours → 12 hours.",
     answer: {
       clarify: "Client: XYZBank. Tension: digital adoption is booming, but reliability is failing — failed transactions sit at 6.5% (over double the 3% target) and complaints take 48 hours to resolve. Decision: where to invest — fix the platform (A), grow users (B), or combine both (C).",
       root: "The complaints are not a marketing problem; the platform's reliability and support capacity have not scaled with adoption. Growth is happening on a fragile foundation. Acquiring more users into a 6.5% failure rate (Option B alone) would multiply complaints and churn. But fixing technology only (Option A) ignores the growth momentum that is the bank's biggest opportunity.",
