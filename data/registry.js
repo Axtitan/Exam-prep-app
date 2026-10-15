@@ -76,12 +76,14 @@ window.PREP_REGISTRY = {
   }
  },
  "deloitte": {
-  "count": 311,
+  "count": 382,
   "cats": {
-   "Quantitative Reasoning": 137,
-   "Verbal Reasoning": 57,
+   "Quantitative Reasoning": 167,
+   "Verbal Reasoning": 75,
    "Abstract Reasoning": 17,
-   "Numerical Reasoning": 100
+   "Numerical Reasoning": 100,
+   "General Knowledge": 20,
+   "Critical Reasoning": 3
   }
  },
  "workforce": {

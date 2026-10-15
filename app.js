@@ -18,8 +18,8 @@ const EXAMS = [
   { id: 'premiumtrust', name: 'Premium Trust', org: 'Premium Trust Bank, graduate trainee',
     desc: 'Numerical, verbal, abstract, logical and critical reasoning, plus banking, economics and ICT.',
     modes: [M.t(60, 'Standard paper', 'The real test clock.'), M.t(45, 'Speed drill', 'A tighter clock to build pace.'), M.t(90, 'Extended paper', 'More time for a deeper session.'), M.free] },
-  { id: 'deloitte', name: 'Deloitte', org: 'Deloitte graduate aptitude, with Dragnet',
-    desc: 'Quantitative, verbal and abstract reasoning from the Deloitte study pack, plus the 100 Dragnet chart questions.',
+  { id: 'deloitte', name: 'Deloitte', org: 'Deloitte graduate aptitude, with Dragnet', essay: true,
+    desc: 'Quantitative, verbal and abstract reasoning and general knowledge from the 2024 assessment and the study pack, the 100 Dragnet chart questions, and a timed essay test.',
     modes: [M.t(60, 'Standard paper', 'A full mixed paper.'), M.t(45, 'Intensive', 'A balanced challenge against the clock.'), M.t(30, 'Speed drill', 'Half the time, to build pace.'), M.free] },
   { id: 'workforce', name: 'Workforce', org: 'Workforce Group ability test',
     desc: 'Five Workforce ability papers: verbal, numerical, abstract and critical reasoning, and general knowledge.',
@@ -121,10 +121,11 @@ const TOPICS = buildTopics();
 let currentView = 'dashboard';
 function showView(name, anchor) {
   if (session && session.timer && name !== 'quiz' && name !== 'result') stopTimer();
+  if (name !== 'essay' && typeof Essay !== 'undefined' && Essay.timer) { Essay.count(); Essay.stop(); }
   const changed = name !== currentView;
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'v-' + name));
   document.querySelectorAll('.bar-links [data-nav]').forEach((n) => n.classList.toggle('active', n.dataset.nav === name && (name !== 'dashboard' || !!anchor)));
-  document.body.classList.toggle('in-quiz', name === 'quiz');
+  document.body.classList.toggle('in-quiz', name === 'quiz' || (name === 'essay' && !$('essay-write').hidden));
   currentView = name;
   if (name === 'dashboard') renderHome();
   if (name === 'topics') renderTopics();
@@ -153,7 +154,8 @@ function testBar(e, open) {
     meter(c.pct, `${e.name} completion`),
     h('div', { class: 'row' },
       h('button', { class: 'btn', text: `Open ${e.name}`, onclick: () => openExam(e.id) }),
-      h('button', { class: 'btn quiet', text: 'Quick practice', onclick: () => { currentExam = e.id; selectedCats.clear(); startExam(M.free); } })));
+      h('button', { class: 'btn quiet', text: 'Quick practice', onclick: () => { currentExam = e.id; selectedCats.clear(); startExam(M.free); } }),
+      e.essay ? h('button', { class: 'btn quiet', text: 'Essay test', onclick: () => Essay.open(e.id) }) : null));
   return h('details', { class: 'bar-item', open: open || undefined },
     h('summary', {}, h('span', { text: e.name }), h('span', { class: 'count', text: fmt(c.total) }), h('span', { class: 'plus', 'aria-hidden': 'true', text: '+' })),
     panel);
@@ -240,7 +242,8 @@ function openExam(id) {
   fill($('mode-grid'), ...e.modes.map((m) => h('button', { class: 'mode', onclick: () => startExam(m) },
     h('span', {}, h('span', { class: 'mode-title', text: m.title }), h('br'), h('span', { class: 'mode-sub', text: m.sub })),
     h('span', { class: 'mode-time', text: m.mins ? `${m.mins} min` : 'no clock' }))));
-  fill($('exam-extra'), e.ac ? h('button', { class: 'btn quiet', text: 'Assessment centre prep', onclick: () => showView('ac') }) : null);
+  fill($('exam-extra'), e.ac ? h('button', { class: 'btn quiet', text: 'Assessment centre prep', onclick: () => showView('ac') }) : null,
+    e.essay ? h('button', { class: 'btn quiet', text: 'Essay test (20 min, marked by the tutor)', onclick: () => Essay.open(e.id) }) : null);
   showView('exam');
   loadBank(id).catch(() => {}); // warm the cache while the user picks a mode
 }
@@ -572,20 +575,20 @@ function renderMsg(role, content) {
   });
   return el;
 }
-function keyForm() {
+function keyForm(onSaved = () => Tutor.paint()) {
   const input = h('input', { type: 'password', placeholder: 'Paste your Groq API key (gsk_…)', autocomplete: 'off', spellcheck: 'false', maxlength: '200', 'aria-label': 'Groq API key' });
   const remember = h('input', { type: 'checkbox' });
   const form = h('form', { class: 'tutor-key' },
     h('strong', { text: 'Connect the AI tutor' }),
-    h('span', { class: 'muted small', text: 'The tutor uses your own free Groq key (console.groq.com → API Keys). It is sent only to api.groq.com.' }),
+    h('span', { class: 'hint', text: 'The tutor uses your own free Groq key (console.groq.com → API Keys). It is sent only to api.groq.com.' }),
     input,
     h('label', { class: 'check small' }, remember, 'Remember on this device'),
-    h('button', { class: 'btn primary sm', type: 'submit', text: 'Save key' }));
+    h('button', { class: 'btn sm', type: 'submit', text: 'Save key' }));
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const v = input.value.trim();
     if (!/^[\w-]{20,200}$/.test(v)) { input.setCustomValidity('That does not look like a Groq key.'); input.reportValidity(); return; }
-    Key.set(v, remember.checked); Tutor.paint();
+    Key.set(v, remember.checked); onSaved();
   });
   input.addEventListener('input', () => input.setCustomValidity(''));
   return form;
@@ -596,6 +599,249 @@ async function toDataUrl(src) {
   if (blob.size > 3.5e6) throw new Error('image too large');
   return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(blob); });
 }
+
+// ─── Essay test (Deloitte): timed typed essay, marked by the tutor ───────────
+// The marker gets a RANGE of acceptable approaches per topic and is told to credit any clear,
+// well-supported position. It also returns grammar and expression corrections as structured
+// data, which is rendered as text and highlighted inside the essay (never as HTML).
+const ESSAY_STORE = 'prep_essays_v1', ESSAY_DRAFT = 'prep_essay_draft';
+const Essay = {
+  set: null, topic: null, timer: null, endsAt: 0, untimed: false, current: null,
+  open(examId = 'deloitte') {
+    this.set = (window.PREP_ESSAYS || {})[examId];
+    if (!this.set) return;
+    this.examId = examId;
+    this.stop();
+    this.show('pick');
+    $('essay-intro').textContent = `${this.set.instructions} The tutor then marks it against the ${this.set.source} criteria and corrects your grammar and expression.`;
+    this.topic = null; $('essay-start').disabled = true;
+    fill($('essay-topics'), ...this.set.topics.map((t, i) => h('button', { class: 'bar-row essay-topic', 'aria-pressed': 'false', onclick: (e) => this.choose(t, e.currentTarget) },
+      h('span', {}, h('span', { class: 'mode-title', text: `Topic ${i + 1}: ${t.title}` }), h('br'), h('span', { class: 'mode-sub', text: t.prompt.length > 150 ? t.prompt.slice(0, 147) + '…' : t.prompt })))));
+    this.history();
+    const draft = store.get(ESSAY_DRAFT, null);
+    if (draft && draft.text && this.set.topics.some((t) => t.id === draft.topicId)) {
+      fill($('essay-history'), h('p', { class: 'r-group', text: 'Unfinished draft' }),
+        h('p', { class: 'r-row' }, h('span', { text: this.set.topics.find((t) => t.id === draft.topicId).title }), h('i'), h('button', { class: 'link', text: 'Resume', onclick: () => this.resume(draft) })),
+        ...$('essay-history').children);
+    }
+    showView('essay');
+  },
+  show(part) { ['pick', 'write', 'result'].forEach((p) => { $('essay-' + p).hidden = p !== part; }); },
+  choose(t, btn) {
+    this.topic = t;
+    document.querySelectorAll('.essay-topic').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+    $('essay-start').disabled = false;
+  },
+  start(text = '', secondsLeft) {
+    if (!this.topic) return;
+    this.untimed = $('essay-untimed').checked;
+    $('essay-title').textContent = this.topic.title;
+    $('essay-prompt').textContent = this.topic.prompt;
+    const ta = $('essay-text'); ta.value = text; ta.readOnly = false;
+    this.count();
+    this.show('write');
+    document.body.classList.add('in-quiz');
+    this.startedAt = Date.now();
+    const secs = secondsLeft !== undefined ? secondsLeft : this.set.minutes * 60;
+    this.endsAt = Date.now() + secs * 1000;
+    $('essay-timer').hidden = this.untimed;
+    if (!this.untimed) { this.tick(); this.timer = setInterval(() => this.tick(), 500); }
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    ta.focus();
+  },
+  resume(draft) {
+    const t = this.set.topics.find((x) => x.id === draft.topicId); if (!t) return;
+    this.topic = t;
+    $('essay-untimed').checked = !draft.endsAt;
+    const left = draft.endsAt ? Math.max(30, Math.round((draft.endsAt - draft.savedAt) / 1000)) : undefined;
+    this.start(draft.text, left);
+  },
+  tick() {
+    const left = Math.max(0, Math.round((this.endsAt - Date.now()) / 1000));
+    const el = $('essay-timer'); el.textContent = fmtTime(left); el.classList.toggle('warn', left <= 120);
+    if (left <= 0) { $('essay-text').readOnly = true; this.submit(true); }
+  },
+  stop() { if (this.timer) { clearInterval(this.timer); this.timer = null; } },
+  words(t) { return (t.trim().match(/\S+/g) || []).length; },
+  count() {
+    const text = $('essay-text').value;
+    $('essay-words').textContent = this.words(text);
+    if (this.topic) store.set(ESSAY_DRAFT, { topicId: this.topic.id, text, endsAt: this.untimed ? 0 : this.endsAt, savedAt: Date.now() });
+  },
+  async submit(timeUp) {
+    this.stop();
+    document.body.classList.remove('in-quiz');
+    const text = $('essay-text').value.trim();
+    if (this.words(text) < 30 && !timeUp) { if (!confirm('Your essay is under 30 words. Submit it anyway?')) { if (!this.untimed) this.timer = setInterval(() => this.tick(), 500); document.body.classList.add('in-quiz'); return; } }
+    store.del(ESSAY_DRAFT);
+    const used = Math.round((Date.now() - this.startedAt) / 1000);
+    this.current = { id: 'e' + Date.now(), topicId: this.topic.id, title: this.topic.title, text, words: this.words(text), secondsUsed: used, untimed: this.untimed, timeUp: !!timeUp, at: Date.now(), grade: null };
+    this.saveAttempt();
+    this.show('result');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    await this.mark();
+  },
+  saveAttempt() {
+    const all = store.get(ESSAY_STORE, []).filter((a) => a.id !== this.current.id);
+    all.unshift(this.current);
+    store.set(ESSAY_STORE, all.slice(0, 30));
+  },
+  history() {
+    const all = store.get(ESSAY_STORE, []).filter((a) => this.set.topics.some((t) => t.id === a.topicId));
+    if (!all.length) { fill($('essay-history'), h('p', { text: 'No essays yet. Your marked essays will be listed here.' })); return; }
+    fill($('essay-history'), h('p', { class: 'r-group', text: 'Latest first' }),
+      ...all.map((a) => h('p', { class: 'r-row' },
+        h('button', { class: 'link', text: `${a.title}, ${new Date(a.at).toLocaleDateString()}`, onclick: () => { this.current = a; this.topic = this.set.topics.find((t) => t.id === a.topicId); this.show('result'); showView('essay'); this.render(); } }),
+        h('i'), h('span', { text: a.grade ? `${a.grade.total}/100` : 'not marked' }))));
+  },
+  // ── Marking ──
+  prompt() {
+    const t = this.topic, s = this.set, g = t.guide;
+    const crit = s.criteria.map((c) => `- ${c.key} (0–${c.weight}): ${c.name}. ${c.desc}`).join('\n');
+    const ranges = g.positions.map((p) => `• ${p.stance}: ${p.points.join(' | ')}`).join('\n');
+    return [
+      `You are an experienced assessor marking a typed essay written in a timed test (${s.minutes} minutes) for the ${s.source}, a graduate recruitment assessment in Nigeria.`,
+      '', `ESSAY QUESTION:\n${t.prompt}`,
+      '', `WHAT THE QUESTION ASSESSES: ${g.assesses}`,
+      '', 'REFERENCE NOTES: a RANGE of acceptable approaches. This is not a model answer and not a checklist.',
+      ranges, `Useful examples: ${g.examples.join(' | ')}`, `Typical structure: ${g.structure}`, `Common pitfalls: ${g.pitfalls.join(' | ')}`,
+      '', 'MARKING PRINCIPLES:',
+      '- Self-expression and reasoning are being assessed, so there is no single correct answer. Give full credit to ANY clear, well-reasoned position, including positions or examples not in the notes. Never penalise a stance for disagreeing with the notes.',
+      '- Judge the quality of reasoning, relevance to every part of the question, use of evidence, organisation and language. Penalise a factual claim only when it is clearly wrong, and say why.',
+      `- Calibrate to what a strong graduate can write in ${s.minutes} minutes (about 350–550 words). A short essay can still score well on reasoning, but loses structure marks if it is underdeveloped.`,
+      '- Be specific: quote or refer to the essay’s own words. Be encouraging but honest.',
+      '', `CRITERIA (score each as an integer within its range):\n${crit}`,
+      '', 'GRAMMAR AND EXPRESSION: find errors in grammar, spelling, punctuation, word choice, tense, agreement, and awkward or unclear expression. For each, copy the shortest exact excerpt from the essay (verbatim, so it can be found in the text), give the corrected version, and a short reason. List up to 20, most important first. British or Nigerian English spellings are acceptable. If the language is clean, return an empty list.',
+      '', 'Return ONLY a JSON object with exactly these keys:',
+      '{"scores":{"relevance":0,"argument":0,"evidence":0,"structure":0,"language":0},"position":"one sentence: the stance the essay takes","summary":"2–3 sentences of overall feedback","strengths":["…"],"improvements":["specific, actionable"],"missed_angles":["valid points or examples the essay could have used"],"corrections":[{"original":"exact excerpt","corrected":"fixed text","why":"short reason"}],"improved_paragraph":"a rewrite of the essay’s weakest paragraph in the student’s own voice, corrected and strengthened"}',
+    ].join('\n');
+  },
+  async mark() {
+    this.render();
+    if (!Key.get()) return;
+    const a = this.current;
+    $('essay-band').textContent = 'Marking…';
+    $('essay-summary').textContent = 'The tutor is reading your essay. This usually takes 10–30 seconds.';
+    try {
+      const raw = await this.call(a.text);
+      a.grade = this.parse(raw);
+      a.grade.model = this.lastModel;
+      this.saveAttempt();
+      PROGRESS.sessions.unshift({ exam: this.examId, label: `${EXAM[this.examId].name} essay`, mode: a.title, correct: a.grade.total, attempted: 100, total: 100, at: a.at });
+      PROGRESS.sessions = PROGRESS.sessions.slice(0, 40); saveProgress();
+    } catch (err) {
+      if (err.auth) Key.clear();
+      a.error = err.message;
+    }
+    this.render();
+  },
+  async call(text) {
+    const key = Key.get();
+    let last = '';
+    for (const model of models()) {
+      for (const json of [true, false]) {
+        let res;
+        const body = { model, temperature: 0.2, max_tokens: 3000, messages: [{ role: 'system', content: this.prompt() }, { role: 'user', content: `THE ESSAY (${this.words(text)} words${this.current.timeUp ? ', submitted when time ran out' : ''}):\n\n${text || '(empty)'}` }] };
+        if (json) body.response_format = { type: 'json_object' };
+        try {
+          res = await fetch('https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, body: JSON.stringify(body), referrerPolicy: 'no-referrer' });
+        } catch (e) { last = 'Network error. Check your connection.'; break; }
+        let data = null; try { data = await res.json(); } catch (e) { /* non-JSON */ }
+        if (res.status === 401 || res.status === 403) { const err = new Error('Groq rejected the saved API key, so it has been removed. Enter a valid key and mark the essay again.'); err.auth = true; throw err; }
+        const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+        if (res.ok && content) { this.lastModel = model; return content; }
+        last = (data && data.error && data.error.message) || `HTTP ${res.status}`;
+        if (res.status === 429) { last = 'Rate limit reached on your Groq key. Wait a minute, then mark again.'; break; }
+        if (!(json && res.status === 400)) break; // only retry without JSON mode when JSON mode was refused
+      }
+    }
+    throw new Error('The tutor could not mark the essay. ' + last);
+  },
+  parse(raw) {
+    const txt = cleanReply(raw);
+    const start = txt.indexOf('{'), end = txt.lastIndexOf('}');
+    let j;
+    try { j = JSON.parse(txt.slice(start, end + 1)); } catch (e) { throw new Error('The tutor’s reply could not be read. Try marking again.'); }
+    const scores = {};
+    let total = 0;
+    for (const c of this.set.criteria) {
+      const v = Math.max(0, Math.min(c.weight, Math.round(Number((j.scores || {})[c.key]) || 0)));
+      scores[c.key] = v; total += v;
+    }
+    const list = (x) => (Array.isArray(x) ? x.filter((s) => typeof s === 'string' && s.trim()).slice(0, 12) : []);
+    const corrections = (Array.isArray(j.corrections) ? j.corrections : [])
+      .filter((c) => c && typeof c.original === 'string' && typeof c.corrected === 'string' && c.original.trim() && c.original.trim() !== c.corrected.trim())
+      .slice(0, 25).map((c) => ({ original: c.original.trim(), corrected: c.corrected.trim(), why: String(c.why || '').trim() }));
+    return { scores, total, position: String(j.position || ''), summary: String(j.summary || ''), strengths: list(j.strengths), improvements: list(j.improvements), missed: list(j.missed_angles), corrections, improved: String(j.improved_paragraph || '') };
+  },
+  band(total) { return total >= 80 ? 'A strong essay.' : total >= 65 ? 'A good essay, with gaps.' : total >= 50 ? 'A fair attempt.' : 'Needs more work.'; },
+  // ── Result page ──
+  render() {
+    const a = this.current, g = a.grade, t = this.topic, crit = this.set.criteria;
+    $('essay-regrade').hidden = !Key.get();
+    const mins = Math.floor(a.secondsUsed / 60), secs = a.secondsUsed % 60;
+    const took = mins ? `${mins} min${secs ? ` ${secs} s` : ''}` : `${secs} s`;
+    const meta = `${a.words} words, ${a.untimed ? 'written without the clock' : a.timeUp ? 'submitted when time ran out' : `written in ${took}`}`;
+    const parts = [];
+    if (g) {
+      $('essay-score').textContent = g.total;
+      $('essay-band').textContent = this.band(g.total);
+      $('essay-summary').textContent = `${t.title}. ${meta}.`;
+      parts.push(h('div', { class: 'slip receipt wide' },
+        h('p', { class: 'r-group', text: 'Marks' }),
+        ...crit.flatMap((c) => { const bar = h('span'); bar.style.width = (g.scores[c.key] / c.weight * 100) + '%'; return [leaderRow(c.name, `${g.scores[c.key]} of ${c.weight}`), h('div', { class: 'bd-meter', 'aria-hidden': 'true' }, bar)]; }),
+        h('p', { class: 'r-total' }, h('span', { text: 'Total' }), h('span', { text: `${g.total} of 100` }))));
+      parts.push(h('div', { class: 'panel' }, h('h2', { class: 'sec-title sm', text: 'Feedback' }),
+        g.position ? h('p', {}, h('b', { text: 'Your position: ' }), g.position) : null,
+        g.summary ? h('p', { class: 'essay-p', text: g.summary }) : null,
+        g.strengths.length ? [h('h3', { class: 'essay-h', text: 'What worked' }), h('ul', { class: 'ac-list' }, ...g.strengths.map((s) => h('li', { text: s })))] : null,
+        g.improvements.length ? [h('h3', { class: 'essay-h', text: 'To improve' }), h('ul', { class: 'ac-list' }, ...g.improvements.map((s) => h('li', { text: s })))] : null,
+        g.missed.length ? [h('h3', { class: 'essay-h', text: 'Other valid angles you could have used' }), h('ul', { class: 'ac-list' }, ...g.missed.map((s) => h('li', { text: s })))] : null));
+      parts.push(h('div', { class: 'panel' }, h('h2', { class: 'sec-title sm', text: `Grammar and expression (${g.corrections.length})` }),
+        g.corrections.length ? h('ol', { class: 'fixes' }, ...g.corrections.map((c) => h('li', {}, h('s', { text: c.original }), ' → ', h('b', { text: c.corrected }), c.why ? h('span', { class: 'hint', text: ` ${c.why}` }) : null)))
+          : h('p', { text: 'No language errors found. Well done.' }),
+        g.improved ? [h('h3', { class: 'essay-h', text: 'Your weakest paragraph, rewritten' }), h('p', { class: 'essay-p rewrite', text: g.improved })] : null));
+    } else {
+      $('essay-score').textContent = '—';
+      $('essay-band').textContent = a.error ? 'Not marked yet.' : (Key.get() ? 'Marking…' : 'Connect the tutor to get marked.');
+      $('essay-summary').textContent = a.error ? a.error : `${t.title}. ${meta}. Compare your essay with the marking guide below while you wait, or connect the tutor.`;
+      if (!Key.get()) parts.push(h('div', { class: 'panel' }, keyForm(() => { $('essay-regrade').hidden = false; this.mark(); })));
+      if (a.error && Key.get()) $('essay-regrade').hidden = false;
+      parts.push(h('div', { class: 'slip receipt wide' }, h('p', { class: 'r-group', text: 'How it is marked' }), ...crit.map((c) => leaderRow(c.name, `${c.weight} marks`)), h('p', { class: 'r-total' }, h('span', { text: 'Total' }), h('span', { text: '100' }))));
+    }
+    parts.push(h('div', { class: 'panel' }, h('h2', { class: 'sec-title sm', text: 'Your essay' }), this.annotated(a.text, g ? g.corrections : [])));
+    const gd = t.guide;
+    parts.push(h('div', { class: 'panel' }, h('h2', { class: 'sec-title sm', text: 'Ways to answer this topic' }),
+      h('p', { class: 'essay-p', text: `There is no single right answer. Any clear, well-supported position can score well. These are some of the strong routes. ${gd.assesses}` }),
+      ...gd.positions.map((p) => [h('h3', { class: 'essay-h', text: p.stance }), h('ul', { class: 'ac-list' }, ...p.points.map((x) => h('li', { text: x })))]),
+      h('h3', { class: 'essay-h', text: 'Examples you could use' }), h('ul', { class: 'ac-list' }, ...gd.examples.map((x) => h('li', { text: x }))),
+      h('h3', { class: 'essay-h', text: 'A structure that works' }), h('p', { class: 'essay-p', text: gd.structure }),
+      h('h3', { class: 'essay-h', text: 'Common pitfalls' }), h('ul', { class: 'ac-list' }, ...gd.pitfalls.map((x) => h('li', { text: x })))));
+    fill($('essay-feedback'), ...parts);
+  },
+  // Essay text with each correction's excerpt highlighted (text nodes and <mark> only).
+  annotated(text, corrections) {
+    const box = h('div', { class: 'essay-body' });
+    if (!text) { box.append('(empty)'); return box; }
+    const spans = [];
+    for (const c of corrections) {
+      let from = 0, idx;
+      while ((idx = text.indexOf(c.original, from)) !== -1) {
+        if (!spans.some((s) => idx < s.end && idx + c.original.length > s.start)) { spans.push({ start: idx, end: idx + c.original.length, c }); break; }
+        from = idx + 1;
+      }
+    }
+    spans.sort((x, y) => x.start - y.start);
+    let pos = 0;
+    for (const s of spans) {
+      if (s.start > pos) box.append(text.slice(pos, s.start));
+      box.append(h('mark', { title: `${s.c.corrected}${s.c.why ? ' (' + s.c.why + ')' : ''}`, text: text.slice(s.start, s.end) }));
+      pos = s.end;
+    }
+    box.append(text.slice(pos));
+    return box;
+  },
+};
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 function applyTheme(pref) {
@@ -628,7 +874,7 @@ function renderAbout() {
         'Reading passages and data tables were re-attached to the questions that depend on them, and figures were extracted from the original documents.',
         'Every question has a worked explanation. The AI tutor receives the passage, figure (when a vision model is set), options, answer, your choice and the explanation.']),
     ...sec('Exam notes',
-      ['Deloitte: the study pack’s seven sample papers repeat many items; duplicates were merged. It includes the 100-question Dragnet numerical set, with each chart re-checked.',
+      ['Deloitte: 71 questions from the 2024 graduate assessment (screenshots with no key, so worked out independently), the study pack’s sample papers with duplicates merged, and the 100-question Dragnet set with each chart re-checked. It also has the 2024 essay test: ten real topics, 20 minutes, marked by the tutor against five criteria, with grammar corrections.',
         'Workforce: five ability papers. Paper 5.0 has no published key, so its answers were worked out independently and are marked as such.',
         'General Aptitude: a mixed numerical and verbal practice set, useful for any test.']),
     ...sec('Privacy', 'Progress, favourites and tutor chats stay in your browser. The only outside service the app talks to is Groq, and only when you use the AI tutor with your own key.'));
@@ -701,6 +947,11 @@ document.addEventListener('click', (e) => {
   if (!act) return;
   switch (act.dataset.action) {
     case 'try-next': Try.next(); break;
+    case 'essay-start': Essay.start(); break;
+    case 'essay-submit': if (confirm('Submit your essay for marking?')) Essay.submit(false); break;
+    case 'essay-again': Essay.open(Essay.examId); break;
+    case 'essay-back': openExam(Essay.examId); break;
+    case 'essay-regrade': Essay.current.error = null; Essay.mark(); break;
     case 'toggle-theme': applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); break;
     case 'prev': go(-1); break;
     case 'next': go(1); break;
@@ -732,6 +983,7 @@ document.addEventListener('click', (e) => {
     default: break;
   }
 });
+$('essay-text').addEventListener('input', () => Essay.count());
 $('tutor-form').addEventListener('submit', (e) => { e.preventDefault(); const v = $('tutor-input').value; $('tutor-input').value = ''; Tutor.send(v); });
 $('key-form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -755,7 +1007,7 @@ document.addEventListener('keydown', (e) => {
   if (idx >= 0 && idx < q.opts.length && session.answered[session.cur] === undefined && !session.reviewing) { e.preventDefault(); pick(idx); }
 });
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (currentThemePref() === 'system') applyTheme('system'); });
-window.addEventListener('beforeunload', (e) => { if (session && session.timer && currentView === 'quiz') { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', (e) => { if ((session && session.timer && currentView === 'quiz') || (currentView === 'essay' && !$('essay-write').hidden)) { e.preventDefault(); e.returnValue = ''; } });
 
 // ─── Start ───────────────────────────────────────────────────────────────────
 applyTheme(currentThemePref());
