@@ -1,84 +1,79 @@
-# 🎯 Exam Prep System
+# 🎯 Grad Prep — graduate trainee exam practice
 
-An interactive, premium web application designed for students preparing for **EY (Ernst & Young) Jobberman Aptitude Tests**, **SEPLAT Petroleum Assessments**, and **General Aptitude (Workforce) Exams**. 
+A static web app for practising Nigerian graduate trainee recruitment tests with real past questions. Every answer key has been rechecked, every question has a worked explanation, and an AI tutor (Groq) can explain any question.
 
-This system features over 300+ real practice questions, multiple test modes (timed mock exams, speed-blitzing, and free practice), responsive visual themes per assessment, and an **AI Study Assistant** powered by Groq's Llama 3.3.
+**2,634 questions across nine tests:**
 
----
+| Exam | Questions | Topics |
+|---|---:|---|
+| First Bank | 716 | Critical, Verbal, Abstract, Numerical Reasoning (+ assessment centre prep) |
+| GTBank / GTCO | 477 | Numerical, Verbal, Critical, Abstract Reasoning, Grammar, Comprehension |
+| Deloitte (incl. Dragnet) | 311 | Quantitative, Verbal, Abstract Reasoning + 100 Dragnet chart-based numerical questions |
+| Premium Trust | 289 | Numerical, Verbal, Abstract, Logical & Critical Reasoning, Banking, ICT |
+| SEPLAT | 271 | Numerical, Quantitative, Verbal, Banking & Finance, General Knowledge |
+| Workforce | 245 | Five Workforce ability papers: verbal, numerical, abstract, critical, general |
+| Access Bank | 141 | Quantitative, Verbal, Critical Reasoning, patterns, General Knowledge |
+| EY (Jobberman) | 100 | Logical, Numerical, Verbal, Critical Reasoning |
+| General Aptitude | 84 | Mixed numerical and verbal practice |
 
-## ✨ Features
+## Features
 
-- **Multi-Exam Coverage:**
-  - **EY Graduate Assessment (Jobberman):** 158 questions covering Logical, Numerical, Verbal, Critical, Data & Abstract Reasoning.
-  - **SEPLAT Petroleum Assessment:** Real past paper questions covering Numerical, Quantitative, Verbal Reasoning, Banking & Finance, and General Knowledge.
-  - **General Aptitude:** Workforce past papers focusing on core Numerical and Verbal Reasoning.
-- **Multiple Practice Modes:**
-  - 🔥 **Blitz Mode (30 mins):** High-speed pressure mode to build pacing.
-  - ⏱ **Timed/Exam Mode (40-90 mins):** Replicates official exam environments with a countdown timer.
-  - 📖 **Practice Mode (Unlimited):** No clock, instant feedback, and detailed answer explanations after each question.
-- **Category Filtering:** Ability to filter questions by topic (e.g., Numerical, Verbal, Banking & Finance, General Knowledge) for focused study sessions.
-- **🤖 AI Study Assistant (Groq Cloud Integration):** 
-  - Integrated directly into the workspace to help you understand complex explanations.
-  - Powered by **Llama 3.3 70B** on Groq Cloud to explain why an option is right or wrong based on official test logic.
-- **Theme Customization:** Dynamically alters UI accent colors depending on the selected exam category.
-- **PDF Parser Utility (`parse_pdf.py`):** Uses `pdfplumber` to extract and inspect question banks from source past papers.
+- Dashboard with mock-test cards, completion progress, favourites and practice by topic across all exams
+- Timed exam modes, speed drills and untimed practice; pause, skip, a question navigator and keyboard shortcuts (A–E / 1–5, ← →, Space)
+- Passages, charts and tables shown with each question; tap a figure to enlarge it
+- Explanations for every question, plus notes wherever a source key was corrected
+- AI tutor that is given the passage, options, correct answer, your choice and the explanation. With a vision model it also gets the figure.
+- Light, dark and system themes, and a responsive layout from phones to desktops
+- Progress and history saved in the browser
 
----
+## Run it
 
-## 🛠️ Project Structure
+No build step is needed. Either open `index.html` directly, or serve the folder (recommended):
 
-```text
-├── charts/                 # Visual assets (tables, graphs, currency curves for questions)
-├── EY past questions/      # Scanned image assets for specific questions
-├── app.js                  # Frontend core application state, timers, and Groq API logic
-├── index.html              # Clean, responsive user interface structure
-├── parse_pdf.py            # Python utility script using pdfplumber to parse past question PDFs
-├── questions.js            # Raw JSON-like databases containing question banks, options, and explanations
-├── style.css               # Styling definitions (dynamic CSS variables, layouts, and responsiveness)
-└── .gitignore              # Ignores local large PDFs and caches
+```bash
+python -m http.server 8000
 ```
 
----
+Then visit http://localhost:8000. Pushing to `master` deploys to GitHub Pages through `.github/workflows/jekyll-gh-pages.yml`. `_config.yml` keeps source documents and tooling off the published site.
 
-## 🚀 How to Run Locally
+## AI tutor (Groq)
 
-Since the app is built using vanilla Web technologies, you can run it without any build step:
+1. Get a free API key at [console.groq.com](https://console.groq.com/keys).
+2. Paste it into **Settings → AI tutor** or the tutor panel. By default it is kept only for the current tab (`sessionStorage`). Tick *Remember on this device* to store it in `localStorage`.
+3. The key is sent only to `api.groq.com`. Anyone with access to the browser profile can read it, so use a key with a spending limit on shared devices.
+4. Models are tried in order and can be changed in Settings. The vision model is used first for questions with figures, then the tutor falls back to text-only models.
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Axtitan/Exam-prep-app.git
-   cd Exam-prep-app
-   ```
+## Project layout
 
-2. **Open in Browser:**
-   - Double-click `index.html` to open it in your browser directly.
-   - Alternatively, serve it locally with VS Code's Live Server or Python:
-     ```bash
-     python -m http.server 8000
-     ```
-     And navigate to `http://localhost:8000`.
+```text
+index.html          App shell (no inline scripts; strict Content-Security-Policy)
+style.css           Design tokens, light/dark themes, responsive layout
+theme-init.js       Applies the saved theme before first paint
+app.js              Dashboard, quiz engine, progress, AI tutor, assessment centre
+ac_content.js       First Bank assessment-centre content
+data/registry.js    Question counts and topics per exam (loaded up front)
+data/<exam>.js      Question banks, loaded on demand when an exam is opened
+assets/img/…        Figures for First Bank, Deloitte and Workforce questions
+charts/, gtb_figs/  Figures for SEPLAT/General and GTBank questions
+```
 
----
+Question item shape: `{ id, cat, q, opts[], ans (0-based), exp, passage?, img?, imgLabel?, note?, src }`. Keep `id`s stable, because progress and tutor chats are keyed by them.
 
-## 🤖 Configuring the AI Assistant (Groq API Key)
+## Design
 
-To use the interactive AI assistant during practice:
-1. When you click **"Ask AI Assistant"**, the application will prompt you to enter your **Groq API Key**.
-2. If you don't have a key, you can get one for free at [console.groq.com](https://console.groq.com/).
-3. The key is stored securely in your browser's **Local Storage** (`localStorage`) and is never sent to any external server except directly to the Groq API endpoint.
-4. **Security Note:** The `.gitignore` prevents hardcoding and pushing your key to GitHub.
+Art-directed with the [tasteskill](https://github.com/Leonxlnx/taste-skill) "page is the object" direction (seed 1068551543). The home page is printed like an exam answer sheet, oxblood ink on grey paper, with a timing-mark stripe, A–E bubbles, receipts and a postcard footer. Type is Erode (Indian Type Foundry, via Fontshare), self-hosted in `assets/fonts/`. Light, dark and system themes; square corners; no shadows, gradients or outlines.
 
----
+Photographs are in `assets/photos/` (credits in `assets/photos/credits.json`), shown in greyscale, all via Wikimedia Commons:
 
-## 🧹 PDF Parser Utility
+- Students writing an examination at Augustine University, Epe, Lagos, by Addjimedu (CC0). Two views.
+- Lagos skyline with marina, by kopee15 (CC BY-SA 2.5)
+- University of Lagos lagoon front, by JamesNotin (CC0)
+- Bank tower, Victoria Island, by Timmylegend (CC BY-SA 4.0)
+- Scantron answer sheet, by Lexilovescaffeine (CC0)
 
-If you wish to run the PDF parser helper to read or extract more questions:
-1. Ensure Python 3 is installed.
-2. Install `pdfplumber`:
-   ```bash
-   pip install pdfplumber
-   ```
-3. Run the script:
-   ```bash
-   python parse_pdf.py
-   ```
+## Security notes
+
+- All question and content text is rendered with `textContent` and DOM nodes, never `innerHTML`.
+- The CSP allows scripts and fonts only from this site, and network calls only to this site and `api.groq.com`. Fonts are self-hosted; there are no CDNs.
+- GitHub Actions are pinned to commit SHAs, and checkout does not persist credentials.
+- Source PDFs are git-ignored. The EY screenshots, `parse_pdf.py` and raw text dumps are excluded from the published site.
