@@ -2,16 +2,16 @@
 
 A static web app for practising Nigerian graduate trainee recruitment tests with real past questions. Every answer key has been rechecked, every question has a worked explanation, and an AI tutor (Groq) can explain any question.
 
-**2,634 questions across nine tests:**
+**2,708 questions across nine tests, plus a marked essay test:**
 
 | Exam | Questions | Topics |
 |---|---:|---|
 | First Bank | 716 | Critical, Verbal, Abstract, Numerical Reasoning (+ assessment centre prep) |
 | GTBank / GTCO | 477 | Numerical, Verbal, Critical, Abstract Reasoning, Grammar, Comprehension |
-| Deloitte (incl. Dragnet) | 311 | Quantitative, Verbal, Abstract Reasoning + 100 Dragnet chart-based numerical questions |
+| Deloitte (incl. Dragnet) | 382 | 2024 assessment questions, study-pack Quantitative/Verbal/Abstract Reasoning, 100 Dragnet chart questions, and a timed essay test |
 | Premium Trust | 289 | Numerical, Verbal, Abstract, Logical & Critical Reasoning, Banking, ICT |
 | SEPLAT | 271 | Numerical, Quantitative, Verbal, Banking & Finance, General Knowledge |
-| Workforce | 245 | Five Workforce ability papers: verbal, numerical, abstract, critical, general |
+| Workforce | 248 | Five Workforce ability papers: verbal, numerical, abstract, critical, general |
 | Access Bank | 141 | Quantitative, Verbal, Critical Reasoning, patterns, General Knowledge |
 | EY (Jobberman) | 100 | Logical, Numerical, Verbal, Critical Reasoning |
 | General Aptitude | 84 | Mixed numerical and verbal practice |
@@ -23,6 +23,7 @@ A static web app for practising Nigerian graduate trainee recruitment tests with
 - Passages, charts and tables shown with each question; tap a figure to enlarge it
 - Explanations for every question, plus notes wherever a source key was corrected
 - AI tutor that is given the passage, options, correct answer, your choice and the explanation. With a vision model it also gets the figure.
+- Deloitte essay test: pick one of the ten 2024 topics, type against a 20-minute clock (or untimed), then the tutor marks it on relevance, reasoning, evidence, structure and language (out of 100). It lists grammar and expression corrections, highlights them in your text and rewrites your weakest paragraph. The marker is given a range of acceptable approaches for each topic and told to credit any well-reasoned position; the same guide is shown after you submit.
 - Light, dark and system themes, and a responsive layout from phones to desktops
 - Progress and history saved in the browser
 
@@ -53,6 +54,7 @@ app.js              Dashboard, quiz engine, progress, AI tutor, assessment centr
 ac_content.js       First Bank assessment-centre content
 data/registry.js    Question counts and topics per exam (loaded up front)
 data/<exam>.js      Question banks, loaded on demand when an exam is opened
+data/essays.js      Essay topics, marking criteria and per-topic answer guides
 assets/img/…        Figures for First Bank, Deloitte and Workforce questions
 charts/, gtb_figs/  Figures for SEPLAT/General and GTBank questions
 ```

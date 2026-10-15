@@ -230,6 +230,50 @@
     </div>
   </section>
 
+  <!-- ════════════ ESSAY (Deloitte) ════════════ -->
+  <section class="view page" id="v-essay">
+    <div id="essay-pick">
+      <button class="back" data-action="essay-back">← Deloitte</button>
+      <h1 class="page-title">Essay test</h1>
+      <p class="page-lead" id="essay-intro">You have 20 minutes to type an essay on one topic. The tutor then marks it and corrects your grammar and expression.</p>
+      <h2 class="sec-title sm">Choose a topic</h2>
+      <div class="bars" id="essay-topics"></div>
+      <label class="check"><input type="checkbox" id="essay-untimed"> Practise without the clock</label>
+      <div class="row"><button class="btn" id="essay-start" data-action="essay-start" disabled>Start test</button></div>
+      <h2 class="sec-title sm">Past essays</h2>
+      <div class="slip receipt wide" id="essay-history"></div>
+    </div>
+
+    <div id="essay-write" hidden>
+      <div class="quiz-bar">
+        <p class="q-counter" id="essay-title">Essay</p>
+        <p class="tally"><span><b id="essay-words">0</b> words</span></p>
+        <span class="timer" id="essay-timer">20:00</span>
+        <button class="btn sm" data-action="essay-submit">Submit essay</button>
+      </div>
+      <article class="slip essay-prompt"><p id="essay-prompt"></p></article>
+      <label class="essay-label" for="essay-text">Your answer</label>
+      <textarea id="essay-text" class="essay-text" spellcheck="false" autocomplete="off" placeholder="Type your essay here. Aim for a clear introduction, two or three developed points and a conclusion."></textarea>
+      <p class="hint">Spell-check is off, as in the real test. Your draft is kept in this browser until you submit.</p>
+    </div>
+
+    <div id="essay-result" hidden>
+      <button class="back" data-action="essay-again">← Topics</button>
+      <div class="result-head">
+        <p class="total" id="essay-score">—</p>
+        <div>
+          <h1 class="page-title" id="essay-band">Marking…</h1>
+          <p class="page-lead" id="essay-summary"></p>
+        </div>
+      </div>
+      <div id="essay-feedback"></div>
+      <div class="row">
+        <button class="btn" data-action="essay-again">Try another topic</button>
+        <button class="btn quiet" data-action="essay-regrade" id="essay-regrade" hidden>Mark again</button>
+      </div>
+    </div>
+  </section>
+
   <!-- ════════════ PROGRESS ════════════ -->
   <section class="view page" id="v-progress">
     <h1 class="page-title">My progress</h1>
@@ -327,6 +371,7 @@
 </div>
 
 <script src="data/registry.js"></script>
+<script src="data/essays.js"></script>
 <script src="ac_content.js"></script>
 <script src="app.js"></script>
 </body>
