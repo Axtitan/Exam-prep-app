@@ -1,275 +1,332 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Graduate Trainee Exam Prep</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.groq.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Practise Nigerian graduate-trainee aptitude tests with 2,600+ real past questions, timed papers and worked answers.">
+<title>Grad Prep: past papers for graduate-trainee tests</title>
+<link rel="preload" href="assets/fonts/erode-500.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
+<script src="theme-init.js"></script>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 
-<button class="theme-btn" id="theme-btn" onclick="toggleTheme()" aria-label="Switch between light and dark mode">
-  <span id="theme-icon">◐</span><span class="theme-label" id="theme-label">Dark</span>
-</button>
+<header class="bar">
+  <button class="wordmark" data-nav="dashboard" aria-label="Grad Prep home">Grad Prep</button>
+  <nav class="bar-links" aria-label="Main">
+    <button data-nav="dashboard" data-anchor="tests">Tests</button>
+    <button data-nav="topics">Topics</button>
+    <button data-nav="progress">Progress</button>
+    <button data-nav="settings">Settings</button>
+  </nav>
+  <button class="bar-theme" data-action="toggle-theme" id="theme-btn"><span id="theme-label">Dark</span></button>
+  <button class="btn" data-nav="dashboard" data-anchor="tests">Start a paper</button>
+</header>
 
-<!-- ══════════════════ EXAM SELECTION ══════════════════ -->
-<section class="screen active" id="s-select">
-  <div class="wrap wrap-wide">
-    <header class="masthead">
-      <p class="eyebrow">Aptitude test preparation</p>
-      <h1 class="display">Graduate Trainee<br>Exam Prep</h1>
-      <p class="lede">Practise with real past questions from seven graduate recruitment tests.
-        Full explanations, timed exam simulations and instant scoring.</p>
-      <div class="stat-strip" id="stat-strip"></div>
-    </header>
+<main id="main">
 
-    <h2 class="section-title">Choose your exam</h2>
-    <div class="exam-grid">
+  <!-- ════════════ HOME ════════════ -->
+  <section class="view active" id="v-dashboard">
 
-      <button class="exam-card ptb" onclick="selectExam('premiumtrust')">
-        <span class="ribbon">New</span>
-        <span class="ec-icon">💎</span>
-        <span class="ec-name">Premium Trust</span>
-        <span class="ec-count" id="cnt-ptb">—</span>
-        <span class="ec-desc">Premium Trust Bank graduate trainee past questions: Numerical, Verbal, Abstract, Logical, Banking &amp; ICT.</span>
-        <span class="ec-go">Start practising →</span>
-      </button>
-
-      <button class="exam-card gtb" onclick="selectExam('gtbank')">
-        <span class="ribbon">New</span>
-        <span class="ec-icon">🟠</span>
-        <span class="ec-name">GTBank</span>
-        <span class="ec-count" id="cnt-gtb">—</span>
-        <span class="ec-desc">GTBank/GTCO entry-level past questions: Numerical, Verbal, Critical &amp; Abstract Reasoning with figures.</span>
-        <span class="ec-go">Start practising →</span>
-      </button>
-
-      <button class="exam-card fb" onclick="selectExam('firstbank')">
-        <span class="ribbon">New</span>
-        <span class="ec-icon">🏦</span>
-        <span class="ec-name">First Bank</span>
-        <span class="ec-count" id="cnt-fb">—</span>
-        <span class="ec-desc">Critical, Verbal, Abstract &amp; Numerical Reasoning with every figure and data table.</span>
-        <span class="ec-go">Start practising →</span>
-      </button>
-
-      <button class="exam-card ey" onclick="selectExam('ey')">
-        <span class="ec-icon">📊</span>
-        <span class="ec-name">EY</span>
-        <span class="ec-count" id="cnt-ey">—</span>
-        <span class="ec-desc">Logical, Numerical, Verbal and Critical Reasoning from the EY graduate assessment.</span>
-        <span class="ec-go">Start practising →</span>
-      </button>
-
-      <button class="exam-card sep" onclick="selectExam('seplat')">
-        <span class="ec-icon">⛽</span>
-        <span class="ec-name">SEPLAT</span>
-        <span class="ec-count" id="cnt-sep">—</span>
-        <span class="ec-desc">Numerical, Quantitative and Verbal Reasoning plus Banking, Finance and General Knowledge.</span>
-        <span class="ec-go">Start practising →</span>
-      </button>
-
-      <button class="exam-card acc" onclick="selectExam('access')">
-        <span class="ec-icon">🔺</span>
-        <span class="ec-name">Access Bank</span>
-        <span class="ec-count" id="cnt-acc">—</span>
-        <span class="ec-desc">Quantitative and Verbal Reasoning, pattern recognition and general knowledge.</span>
-        <span class="ec-go">Start practising →</span>
-      </button>
-
-      <button class="exam-card gen" onclick="selectExam('general')">
-        <span class="ec-icon">🎯</span>
-        <span class="ec-name">General Aptitude</span>
-        <span class="ec-count" id="cnt-gen">—</span>
-        <span class="ec-desc">Workforce-style Numerical and Verbal Reasoning practice for any graduate trainee test.</span>
-        <span class="ec-go">Start practising →</span>
-      </button>
-
-    </div>
-
-    <div class="tips">
-      <h3>How to get the most out of this</h3>
-      <ul>
-        <li><strong>Start in Practice Mode.</strong> No clock, and you see the full explanation after every answer.</li>
-        <li><strong>Then go timed.</strong> Speed is what most candidates actually fail on.</li>
-        <li><strong>Filter by category</strong> to drill your weakest topic instead of re-doing what you already know.</li>
-        <li><strong>Read every explanation</strong>, including the ones you got right — the reasoning repeats across papers.</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<!-- ══════════════════ HOME / MODE PICKER ══════════════════ -->
-<section class="screen" id="s-home">
-  <div class="wrap">
-    <button class="back-link" onclick="goToSelect()">← All exams</button>
-    <span class="exam-badge" id="home-badge"></span>
-    <h1 id="home-title">Practice</h1>
-    <p class="lede" id="home-sub"></p>
-
-    <div class="panel">
-      <div class="panel-head">
-        <h2 class="panel-title">Filter by category</h2>
-        <p class="panel-note">Leave “All” selected to mix every topic.</p>
+    <div class="hero">
+      <div class="hero-photo" aria-hidden="true">
+        <img class="xfade on" src="assets/photos/back-view-of-students-writing-examination-in.jpg" width="1920" height="1083" alt="">
+        <img class="xfade" src="assets/photos/side-view-of-students-writing-examination-in.jpg" width="1920" height="1083" alt="" loading="lazy">
       </div>
-      <div class="chips" id="home-cats"></div>
+      <div class="hero-col">
+        <article class="sheet hero-card">
+          <div class="timing" aria-hidden="true"></div>
+          <p class="sheet-mark">Grad Prep</p>
+          <h1 class="hero-title">Sit the real paper before the real day.</h1>
+          <p class="hero-sub" id="hero-sub">2,637 past questions from nine graduate-trainee tests, every one worked and explained.</p>
+          <button class="btn" data-anchor-scroll="tests">Choose your test</button>
+          <p class="hero-links">
+            <button data-nav="topics">Practise by topic</button>
+            <button data-nav="progress">My progress</button>
+            <button data-nav="ac">Assessment centre</button>
+          </p>
+        </article>
+
+        <article class="sheet stub" id="try" aria-labelledby="try-h">
+          <h2 id="try-h" class="stub-title">Try one now.</h2>
+          <p class="stub-src" id="try-src">A real question from a past paper.</p>
+          <p class="stub-q" id="try-q">Loading a question…</p>
+          <div class="bubbles" id="try-opts" role="group" aria-label="Answer options"></div>
+          <div class="stub-result" id="try-result" hidden></div>
+          <button class="btn quiet" id="try-next" hidden data-action="try-next">Another question</button>
+        </article>
+      </div>
     </div>
 
-    <h2 class="section-title">Pick a mode</h2>
-    <div class="mode-grid" id="mode-grid"></div>
-
-    <div class="home-btns" id="home-btns"></div>
-  </div>
-</section>
-
-<!-- ══════════════════ QUIZ ══════════════════ -->
-<section class="screen" id="s-quiz">
-  <div class="quiz-bar">
-    <div class="wrap quiz-bar-in">
-      <div class="qb-left">
-        <span class="q-counter" id="q-counter">Question 1 of 50</span>
-        <div class="prog"><div class="prog-fill" id="prog-fill"></div></div>
+    <section class="tests" id="tests" aria-labelledby="tests-h">
+      <div class="tests-col">
+        <h2 class="giant" id="tests-h">Tests</h2>
+        <div class="bars" id="test-bars"></div>
       </div>
-      <div class="qb-right">
-        <div class="score-pills">
-          <span class="pill ok"><b id="s-correct">0</b> right</span>
-          <span class="pill err"><b id="s-wrong">0</b> wrong</span>
-          <span class="pill"><b id="s-remain">0</b> left</span>
+    </section>
+
+    <section class="show" aria-labelledby="show-h">
+      <img class="show-photo" src="assets/photos/lagos-skyline-with-marina.jpg" width="3648" height="972" alt="The Lagos skyline seen across the lagoon from the Marina" loading="lazy">
+      <div class="show-text">
+        <p class="show-lead"><strong id="show-h">Worked, not just marked.</strong> Every answer shows its working, line by line.</p>
+        <p class="show-lead">When a paper’s key and the working disagree, you see both.</p>
+      </div>
+      <div class="slips" id="slips"></div>
+    </section>
+
+    <section class="how" aria-labelledby="how-h">
+      <div class="how-text">
+        <h2 class="sec-title" id="how-h">How a paper runs</h2>
+        <p>Fifty questions drawn at random from the test you choose, with the clock the real paper uses. Pause when you must; nothing is lost.</p>
+      </div>
+      <div class="slip receipt">
+        <p class="r-group">Before</p>
+        <p class="r-row"><span>Choose a test and its topics</span><i></i><span>1 min</span></p>
+        <p class="r-row"><span>Pick timed or practice</span><i></i><span>&nbsp;</span></p>
+        <p class="r-group">During</p>
+        <p class="r-row"><span>Answer 50 questions</span><i></i><span>50 min</span></p>
+        <p class="r-row"><span>Press A–E or 1–5 to answer</span><i></i><span>&nbsp;</span></p>
+        <p class="r-row"><span>Pause with the space bar</span><i></i><span>&nbsp;</span></p>
+        <p class="r-group">After</p>
+        <p class="r-row"><span>Read every explanation</span><i></i><span>10 min</span></p>
+        <p class="r-row"><span>Ask the tutor why</span><i></i><span>any time</span></p>
+        <p class="r-total"><span>Your score, topic by topic</span><span>about 1 hour</span></p>
+      </div>
+    </section>
+
+    <section class="sheets" aria-labelledby="sheets-h">
+      <h2 class="sec-title" id="sheets-h">More in the booklet</h2>
+      <article class="csheet c1">
+        <h3>A tutor on every question</h3>
+        <p>Stuck on why the answer is C? Ask. The tutor reads the passage, the chart, your choice and the working, and explains in plain steps. It runs on your own free Groq key.</p>
+        <img src="assets/photos/scantron-form-815-e-half-testing-sheet.jpg" width="1032" height="1031" alt="A multiple-choice answer sheet with rows of lettered bubbles" loading="lazy">
+      </article>
+      <article class="csheet c2">
+        <h3>One topic at a time</h3>
+        <p>Drill numerical, verbal, abstract or critical reasoning across every test at once, until your weakest topic is your strongest.</p>
+        <img src="assets/photos/university-of-lagos-lagoon-front.jpg" width="1920" height="1440" alt="The lagoon front at the University of Lagos" loading="lazy">
+      </article>
+      <article class="csheet c3">
+        <h3>The First Bank assessment centre</h3>
+        <p>Case studies, the group exercise, the competency interview and the presentation, each with a model answer in five steps.</p>
+        <img src="assets/photos/diamond-bank-tower-victoria-island.jpg" width="1920" height="1440" alt="A bank tower on Victoria Island, Lagos" loading="lazy">
+      </article>
+    </section>
+
+    <section class="stats" aria-labelledby="stats-h">
+      <div class="stats-left">
+        <div>
+          <h2 class="sec-title" id="stats-h">Every question, counted</h2>
+          <p>Each one taken from a past paper, checked against its answer key and given a worked explanation.</p>
         </div>
-        <span class="timer-box" id="timer">00:00</span>
-        <button class="btn-icon" id="pause-btn" onclick="togglePause()">⏸ Pause</button>
-        <button class="btn-icon danger" onclick="confirmCancel()">End</button>
+        <div>
+          <p class="total" id="stats-total">2,637</p>
+          <p class="total-cap">past questions across nine tests</p>
+        </div>
       </div>
+      <div class="slip receipt" id="stats-receipt"></div>
+    </section>
+  </section>
+
+  <!-- ════════════ EXAM ════════════ -->
+  <section class="view page" id="v-exam">
+    <button class="back" data-nav="dashboard" data-anchor="tests">← All tests</button>
+    <h1 class="page-title" id="exam-title"></h1>
+    <p class="page-lead" id="exam-sub"></p>
+    <div class="facts" id="exam-stats"></div>
+    <h2 class="sec-title sm">Topics</h2>
+    <p class="hint">Leave all topics on to mix everything.</p>
+    <div class="chips" id="exam-cats"></div>
+    <h2 class="sec-title sm">Choose a mode</h2>
+    <div class="modes" id="mode-grid"></div>
+    <div class="row" id="exam-extra"></div>
+  </section>
+
+  <!-- ════════════ TOPICS ════════════ -->
+  <section class="view page" id="v-topics">
+    <h1 class="page-title">Practise by topic</h1>
+    <p class="page-lead">Fifty mixed questions on one skill, drawn from every test that covers it.</p>
+    <div class="bars" id="grid-topics"></div>
+  </section>
+
+  <!-- ════════════ QUIZ ════════════ -->
+  <section class="view page quiz" id="v-quiz">
+    <div class="quiz-bar">
+      <p class="q-counter" id="q-counter">Question 1 of 50</p>
+      <div class="prog" aria-hidden="true"><div class="prog-fill" id="prog-fill"></div></div>
+      <p class="tally"><span><b id="s-correct">0</b> right</span><span><b id="s-wrong">0</b> wrong</span><span><b id="s-remain">0</b> left</span></p>
+      <span class="timer" id="timer">00:00</span>
+      <button class="btn quiet sm" id="pause-btn" data-action="pause">Pause</button>
+      <button class="btn quiet sm" data-action="end">End</button>
     </div>
-  </div>
 
-  <div class="wrap quiz-body">
-    <article class="q-card">
-      <span class="q-tag" id="q-tag">Category</span>
-
+    <article class="q-sheet sheet">
+      <p class="q-meta"><span id="q-tag">Category</span><span id="q-src"></span></p>
       <details class="passage" id="q-passage">
-        <summary><span class="passage-label">Passage / data brief</span><span class="passage-hint">tap to read</span></summary>
+        <summary>Passage and data</summary>
         <div class="passage-body" id="q-passage-body"></div>
       </details>
-
       <h2 class="q-text" id="q-text"></h2>
-
-      <figure class="q-chart" id="q-chart">
-        <figcaption class="chart-head">
-          <span id="q-chart-label">Figure</span>
-          <button class="chart-zoom" onclick="toggleChart()">⤢ Zoom</button>
-        </figcaption>
-        <img id="q-chart-img" alt="Figure or data table for this question" onclick="toggleChart()">
+      <figure class="q-figure" id="q-figure">
+        <img id="q-figure-img" alt="Figure or data table for this question" data-action="zoom">
+        <figcaption><span id="q-figure-label">Figure</span> <button class="link" data-action="zoom">Enlarge</button></figcaption>
       </figure>
+      <div class="opts" id="opts" role="list"></div>
 
-      <div class="opts" id="opts"></div>
-
-      <div class="exp-box" id="exp-box">
-        <button class="exp-header" id="exp-header" onclick="toggleExp()">
-          <span class="exp-icon" id="exp-icon">✓</span>
-          <span class="exp-title" id="exp-title">Explanation</span>
-          <span class="exp-toggle" id="exp-toggle">▾</span>
-        </button>
+      <div class="exp slip" id="exp" hidden>
+        <p class="exp-head" id="exp-head"></p>
         <div class="exp-body" id="exp-body"></div>
       </div>
 
-      <div class="ai-launch">
-        <button class="btn ghost" id="ai-chat-btn" onclick="openAiChat()">💬 Ask the AI tutor about this question</button>
-      </div>
-
-      <div class="ai-chat" id="ai-chat">
-        <div class="ai-head">
-          <span class="ai-title">AI tutor</span>
-          <button class="btn-icon" id="ai-chat-toggle-btn" onclick="toggleAiChat()">▾ Hide</button>
-        </div>
-        <div class="ai-messages" id="ai-messages"></div>
-        <div class="ai-input-row">
-          <input id="ai-input" type="text" placeholder="Why is this the answer?" onkeydown="if(event.key==='Enter')sendAiMsg()">
-          <button class="btn primary" id="ai-send" onclick="sendAiMsg()">Send</button>
+      <div class="tutor" id="tutor" hidden>
+        <button class="btn quiet" id="tutor-open" data-action="tutor-open">Ask the tutor about this question</button>
+        <div class="tutor-panel" id="tutor-panel" hidden>
+          <p class="tutor-head"><span class="tutor-title">Tutor</span><span class="tutor-model" id="tutor-model"></span><button class="link" data-action="tutor-clear">Clear chat</button></p>
+          <div class="tutor-msgs" id="tutor-msgs" aria-live="polite"></div>
+          <p class="tutor-quick">
+            <button class="chip" data-ask="Explain the answer step by step.">Step by step</button>
+            <button class="chip" data-ask="Why is my chosen option wrong?">Why was I wrong?</button>
+            <button class="chip" data-ask="Give me a faster shortcut for this type of question.">A faster method</button>
+          </p>
+          <form class="tutor-input" id="tutor-form">
+            <input id="tutor-input" type="text" placeholder="Ask about this question" autocomplete="off" maxlength="600" aria-label="Ask the tutor">
+            <button class="btn" id="tutor-send" type="submit">Send</button>
+          </form>
         </div>
       </div>
     </article>
 
-    <nav class="q-nav">
-      <button class="btn" id="btn-prev" onclick="go(-1)">← Previous</button>
-      <button class="btn ghost" id="btn-skip" onclick="skip()">Skip</button>
-      <button class="btn primary" id="btn-next" onclick="go(1)">Next →</button>
+    <nav class="q-nav" aria-label="Question navigation">
+      <button class="btn quiet" id="btn-prev" data-action="prev">← Previous</button>
+      <button class="btn quiet" id="btn-skip" data-action="skip">Skip</button>
+      <button class="btn" id="btn-next" data-action="next">Next →</button>
     </nav>
-
-    <details class="dots-panel">
-      <summary>Question navigator</summary>
+    <details class="navigator">
+      <summary>All questions</summary>
       <div class="dots" id="dots"></div>
-      <p class="kbd-hint">Tip: press <kbd>A</kbd>–<kbd>E</kbd> or <kbd>1</kbd>–<kbd>5</kbd> to answer, <kbd>←</kbd> <kbd>→</kbd> to move.</p>
+      <p class="hint">Keys: A–E or 1–5 to answer, ← and → to move, space to pause.</p>
     </details>
-  </div>
-</section>
+  </section>
 
-<!-- ══════════════════ RESULT ══════════════════ -->
-<section class="screen" id="s-result">
-  <div class="wrap">
+  <!-- ════════════ RESULT ════════════ -->
+  <section class="view page" id="v-result">
     <div class="result-head">
-      <div class="score-ring" id="score-ring"><span id="r-pct">0%</span></div>
+      <p class="total" id="r-pct">0%</p>
       <div>
-        <p class="eyebrow" id="r-mode-label"></p>
-        <h1 id="r-grade">Result</h1>
-        <p class="lede" id="r-msg"></p>
+        <h1 class="page-title" id="r-grade">Result</h1>
+        <p class="page-lead"><span id="r-mode"></span>. <span id="r-msg"></span></p>
       </div>
     </div>
-
-    <div class="panel">
-      <div class="panel-head"><h2 class="panel-title">Category breakdown</h2></div>
-      <div id="r-breakdown"></div>
+    <div class="slip receipt wide" id="r-breakdown"></div>
+    <div class="row">
+      <button class="btn" data-action="review">Review answers</button>
+      <button class="btn quiet" data-action="again">New session</button>
+      <button class="btn quiet" data-nav="dashboard">Home</button>
     </div>
+  </section>
 
-    <div class="home-btns">
-      <button class="btn primary" onclick="reviewMode()">Review answers</button>
-      <button class="btn" onclick="goHome()">New session</button>
-      <button class="btn ghost" onclick="goToSelect()">Change exam</button>
-    </div>
-  </div>
-</section>
+  <!-- ════════════ PROGRESS ════════════ -->
+  <section class="view page" id="v-progress">
+    <h1 class="page-title">My progress</h1>
+    <p class="page-lead">Saved in this browser only. Another device or cleared site data starts fresh.</p>
+    <div class="bars" id="progress-grid"></div>
+    <h2 class="sec-title sm">Recent sessions</h2>
+    <div class="slip receipt wide" id="progress-sessions"></div>
+  </section>
 
-<!-- ══════════════════ OVERLAYS ══════════════════ -->
-<div class="overlay" id="pause-overlay">
-  <div class="modal">
-    <h2>Paused</h2>
-    <p class="modal-time" id="pause-time-display">00:00</p>
-    <p>Your timer is stopped. Take a breath — nothing is lost.</p>
-    <button class="btn primary" onclick="togglePause()">▶ Resume</button>
-  </div>
-</div>
-
-<div class="overlay" id="cancel-overlay">
-  <div class="modal">
-    <h2>End this assessment?</h2>
-    <p>You’ll go straight to your results. Unanswered questions count as skipped.</p>
-    <div class="modal-btns">
-      <button class="btn" onclick="closeCancelOverlay()">Keep going</button>
-      <button class="btn danger" onclick="cancelAssessment()">End &amp; see results</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════ ASSESSMENT CENTER (First Bank) ══════════ -->
-<section class="screen" id="s-ac">
-  <div class="wrap">
-    <button class="back-link" onclick="show('s-home')">← First Bank prep</button>
-    <span class="exam-badge fb">🎯 FIRST BANK ASSESSMENT CENTER</span>
-    <h1>Assessment Center Prep</h1>
-    <p class="lede">Case studies, group exercise, competency interview and presentation — every model answer written in the 5-step framework.</p>
-    <div class="ac-tabs" id="ac-tabs"></div>
+  <!-- ════════════ ASSESSMENT CENTRE ════════════ -->
+  <section class="view page" id="v-ac">
+    <button class="back" data-nav="dashboard">← Home</button>
+    <h1 class="page-title">Assessment centre prep</h1>
+    <p class="page-lead">First Bank’s case studies, group exercise, interview and presentation, each model answer set out in five steps.</p>
+    <div class="tabs" id="ac-tabs" role="tablist"></div>
     <div id="ac-body"></div>
-  </div>
-</section>
+  </section>
 
-<script src="questions.js"></script>
-<script src="access_bank_questions.js"></script>
-<script src="first_bank_questions.js"></script>
-<script src="gtbank_questions.js"></script>
-<script src="premium_trust_questions.js"></script>
+  <!-- ════════════ SETTINGS ════════════ -->
+  <section class="view page" id="v-settings">
+    <h1 class="page-title">Settings</h1>
+    <div class="panel">
+      <h2 class="sec-title sm">Appearance</h2>
+      <div class="seg" role="radiogroup" aria-label="Theme">
+        <button class="seg-btn" data-theme-set="light">Light</button>
+        <button class="seg-btn" data-theme-set="dark">Dark</button>
+        <button class="seg-btn" data-theme-set="system">Match system</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2 class="sec-title sm">Tutor (Groq)</h2>
+      <p>The tutor calls Groq straight from your browser with your own key. The key never reaches this site, but anyone using this browser profile could read it, so use a key with a spending limit and revoke it if the device is shared.</p>
+      <form class="form" id="key-form">
+        <label class="field"><span>Groq API key</span><input id="key-input" type="password" autocomplete="off" spellcheck="false" placeholder="gsk_…" maxlength="200"></label>
+        <label class="check"><input type="checkbox" id="key-remember"> Remember on this device (otherwise it is forgotten when the tab closes)</label>
+        <div class="row"><button class="btn" type="submit">Save key</button><button class="btn quiet" type="button" data-action="key-clear">Forget key</button></div>
+        <p class="hint" id="key-status"></p>
+      </form>
+      <label class="field"><span>Models to try, in order, separated by commas</span><input id="model-input" type="text" spellcheck="false"></label>
+      <label class="field"><span>Model that can read figures (leave blank to send text only)</span><input id="vision-input" type="text" spellcheck="false"></label>
+      <div class="row"><button class="btn" data-action="models-save">Save models</button><button class="btn quiet" data-action="models-reset">Reset to defaults</button></div>
+    </div>
+    <div class="panel">
+      <h2 class="sec-title sm">Your data</h2>
+      <p>Progress, saved tests and tutor chats live in this browser.</p>
+      <div class="row"><button class="btn quiet" data-action="reset-progress">Reset progress</button><button class="btn quiet" data-action="reset-chats">Delete tutor chats</button></div>
+    </div>
+  </section>
+
+  <!-- ════════════ ABOUT ════════════ -->
+  <section class="view page" id="v-about">
+    <h1 class="page-title">About the questions</h1>
+    <div class="prose" id="about-body"></div>
+  </section>
+</main>
+
+<footer class="foot" id="foot">
+  <div class="postcard">
+    <div class="pc-msg">
+      <p class="pc-sign">Good luck on the day.</p>
+      <p>Practise a little every day, time yourself at least once a week, and read the working even when you got it right.</p>
+    </div>
+    <div class="pc-addr">
+      <img class="stamp" src="assets/photos/scantron-form-815-e-half-testing-sheet.jpg" width="1032" height="1031" alt="" loading="lazy">
+      <button class="link" data-nav="about">About the questions</button>
+      <button class="link" data-nav="progress">My progress</button>
+      <button class="link" data-nav="settings">Settings and tutor key</button>
+      <button class="link" data-nav="ac">Assessment centre</button>
+    </div>
+    <p class="imprint" id="credits">Photographs, shown in greyscale, via Wikimedia Commons: exam hall at Augustine University, Epe, by Addjimedu (CC0); Lagos skyline with marina by kopee15 (CC BY-SA 2.5); University of Lagos lagoon front by JamesNotin (CC0); bank tower, Victoria Island, by Timmylegend (CC BY-SA 4.0); answer sheet by Lexilovescaffeine (CC0). Type: Erode by Indian Type Foundry.</p>
+  </div>
+</footer>
+
+<!-- OVERLAYS -->
+<div class="overlay" id="pause-overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pause-h">
+    <h2 id="pause-h">Paused</h2>
+    <p class="modal-time" id="pause-time">00:00</p>
+    <p>The clock is stopped. Nothing is lost.</p>
+    <button class="btn" data-action="pause">Resume</button>
+  </div>
+</div>
+<div class="overlay" id="end-overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="end-h">
+    <h2 id="end-h">End this paper?</h2>
+    <p>You go straight to your results. Unanswered questions count as skipped.</p>
+    <div class="row center">
+      <button class="btn quiet" data-action="end-cancel">Keep going</button>
+      <button class="btn" data-action="end-confirm">End and see results</button>
+    </div>
+  </div>
+</div>
+<div class="overlay zoom" id="zoom-overlay" hidden data-action="zoom-close">
+  <img id="zoom-img" alt="Enlarged figure">
+</div>
+
+<script src="data/registry.js"></script>
 <script src="ac_content.js"></script>
 <script src="app.js"></script>
 </body>

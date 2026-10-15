@@ -1,0 +1,11 @@
+# GitHub Pages (Jekyll) build settings.
+# Only the app itself is published; source documents and tooling stay in the repo but not on the site.
+exclude:
+  - "EY past questions"
+  - "workforce questions"
+  - deloitte
+  - parse_pdf.py
+  - access_bank_full.txt
+  - section_2012_2016.txt
+  - README.md
+  - .github

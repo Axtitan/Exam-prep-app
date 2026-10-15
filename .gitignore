@@ -29,3 +29,6 @@ Thumbs.db
 # Temporary scratch files
 scratch/
 
+
+# Design-skill working files
+.taste-skill/

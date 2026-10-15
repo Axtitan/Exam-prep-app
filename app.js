@@ -1,720 +1,784 @@
-// ─── EY QUESTION BANK ─────────────────────────────────────────────────────────
-// ─── SEPLAT QUESTION BANK ─────────────────────────────────────────────────────
-// ─── APP STATE ────────────────────────────────────────────────────────────────
-let currentExam = null; // 'ey', 'seplat', 'general', or 'access'
-let BANK = [];
-let qs=[], mode='free', minutes=0, cur=0;
-let answered={}, skipped=new Set(), correct=0, wrong=0;
-let timerInterval=null, timeLeft=0, paused=false;
-let selectedCats=new Set(), reviewing=false;
-let CATS=[];
-const SESSION_SIZE=50;
-let expCollapsed = false;
+'use strict';
+/* Grad Prep: graduate-trainee exam practice.
+   All page text is inserted with textContent / DOM nodes (never innerHTML) so question data
+   can't inject markup, and there are no inline handlers, which lets the page run under a strict CSP. */
 
-// ─── EXAM SELECTION ───────────────────────────────────────────────────────────
-function selectExam(exam) {
-  currentExam = exam;
-  BANK = exam === 'firstbank' ? FIRST_BANK
-       : exam === 'ey' ? EY_BANK
-       : exam === 'seplat' ? SEPLAT_BANK
-       : exam === 'access' ? ACCESS_BANK
-       : exam === 'gtbank' ? GTBANK
-       : exam === 'premiumtrust' ? PREMIUM_TRUST
-       : GENERAL_APTITUDE_BANK;
-  CATS = [...new Set(BANK.map(q=>q.cat))];
-  selectedCats.clear();
+// ─── Exam registry ───────────────────────────────────────────────────────────
+const M = {
+  free: { mode: 'free', mins: 0, title: 'Practice', sub: 'No clock. The working appears after every answer.' },
+  t: (mins, title, sub) => ({ mode: 'timed', mins, title, sub }),
+};
+const EXAMS = [
+  { id: 'firstbank', name: 'First Bank', org: 'First Bank of Nigeria, graduate trainee',
+    desc: 'Critical, verbal, abstract and numerical reasoning from First Bank past papers, with every figure and data table.',
+    modes: [M.t(60, 'Standard paper', 'The real First Bank clock.'), M.t(90, 'Extended paper', 'More time for a deeper session.'), M.t(30, 'Speed drill', 'Half the time, to build pace.'), M.free], ac: true },
+  { id: 'gtbank', name: 'GTBank', org: 'GTBank and GTCO, entry level',
+    desc: 'Numerical, verbal, critical and abstract reasoning from past papers and assessment screenshots.',
+    modes: [M.t(60, 'Standard paper', 'The real GTBank clock.'), M.t(45, 'Speed drill', 'A tighter clock to build pace.'), M.t(90, 'Extended paper', 'More time for a deeper session.'), M.free] },
+  { id: 'premiumtrust', name: 'Premium Trust', org: 'Premium Trust Bank, graduate trainee',
+    desc: 'Numerical, verbal, abstract, logical and critical reasoning, plus banking, economics and ICT.',
+    modes: [M.t(60, 'Standard paper', 'The real test clock.'), M.t(45, 'Speed drill', 'A tighter clock to build pace.'), M.t(90, 'Extended paper', 'More time for a deeper session.'), M.free] },
+  { id: 'deloitte', name: 'Deloitte', org: 'Deloitte graduate aptitude, with Dragnet',
+    desc: 'Quantitative, verbal and abstract reasoning from the Deloitte study pack, plus the 100 Dragnet chart questions.',
+    modes: [M.t(60, 'Standard paper', 'A full mixed paper.'), M.t(45, 'Intensive', 'A balanced challenge against the clock.'), M.t(30, 'Speed drill', 'Half the time, to build pace.'), M.free] },
+  { id: 'workforce', name: 'Workforce', org: 'Workforce Group ability test',
+    desc: 'Five Workforce ability papers: verbal, numerical, abstract and critical reasoning, and general knowledge.',
+    modes: [M.t(50, 'Real conditions', '50 questions in 50 minutes, no calculator.'), M.t(35, 'Speed drill', 'A tighter clock to build pace.'), M.free] },
+  { id: 'ey', name: 'EY', org: 'EY, Jobberman aptitude',
+    desc: 'Logical, numerical, verbal and critical reasoning rebuilt from EY assessment screenshots.',
+    modes: [M.t(30, 'Speed drill', 'Half the time, to build pace.'), M.t(40, 'Intensive', 'A balanced challenge against the clock.'), M.t(60, 'Standard paper', 'The real EY clock.'), M.free] },
+  { id: 'seplat', name: 'SEPLAT', org: 'SEPLAT Energy, graduate',
+    desc: 'Numerical, quantitative and verbal reasoning, plus banking, finance and general knowledge.',
+    modes: [M.t(60, 'Standard paper', 'The real countdown.'), M.t(90, 'Extended paper', 'More time for a deeper session.'), M.free] },
+  { id: 'access', name: 'Access Bank', org: 'Access Bank, graduate trainee',
+    desc: 'Quantitative and verbal reasoning, critical reasoning, patterns and general knowledge.',
+    modes: [M.t(90, 'Full paper', 'The real Access Bank clock, no calculator.'), M.t(60, 'Speed drill', 'A tighter clock to build pace.'), M.t(45, 'Intensive drill', 'Fast, focused practice.'), M.free] },
+  { id: 'general', name: 'General Aptitude', org: 'Mixed practice set',
+    desc: 'A general numerical and verbal reasoning set that suits any graduate-trainee test.',
+    modes: [M.t(40, 'Timed', 'A 40-minute countdown.'), M.t(60, 'Extended', 'An hour against the clock.'), M.free] },
+];
+const EXAM = Object.fromEntries(EXAMS.map((e) => [e.id, e]));
+const REG = window.PREP_REGISTRY || {};
+const SESSION_SIZE = 50;
+const KEYS = ['A', 'B', 'C', 'D', 'E'];
+const TOTAL = Object.values(REG).reduce((s, r) => s + r.count, 0);
 
-  const badge = document.getElementById('home-badge');
-  const title = document.getElementById('home-title');
-  const sub = document.getElementById('home-sub');
-  const accentProp = exam === 'firstbank' ? '--fb-blue'
-       : exam === 'ey' ? '--ey-gold'
-       : exam === 'seplat' ? '--sep-green'
-       : exam === 'access' ? '--acc-red'
-       : exam === 'gtbank' ? '--gtb-orange'
-       : exam === 'premiumtrust' ? '--ptb-teal'
-       : '--gen-blue';
-  document.documentElement.style.setProperty('--accent', `var(${accentProp})`);
-
-  if(exam === 'firstbank') {
-    badge.className = 'exam-badge fb';
-    badge.innerHTML = '🏦 FIRST BANK GRADUATE TRAINEE PREP';
-    title.textContent = 'First Bank Assessment Practice';
-    sub.textContent = `${FIRST_BANK.length} questions from the First Bank graduate trainee past papers — Critical, Verbal, Abstract and Numerical Reasoning, with every figure, data table and worked explanation included. Each session draws ${SESSION_SIZE} random questions.`;
-    buildModeGrid([
-      {m:'timed',mins:60,badge:'⏱ 60 MIN EXAM',badgeCls:'timed',title:'Standard Exam',sub:'60 minutes. Mirrors real First Bank test conditions.'},
-      {m:'timed',mins:90,badge:'🕐 90 MIN MODE',badgeCls:'timed',title:'Extended Exam',sub:'90 minutes for a full-length, deeper practice session.'},
-      {m:'blitz',mins:30,badge:'🔥 30 MIN BLITZ',badgeCls:'fast',title:'Speed Mode',sub:'30 minutes, maximum pressure. Build exam speed.'},
-      {m:'free',mins:0,badge:'📖 PRACTICE',badgeCls:'practice',title:'Practice Mode',sub:'No clock. Full explanations after every answer.'},
-    ]);
-    document.getElementById('home-btns').innerHTML = `<button class="btn primary" onclick="startQuiz('timed',60)">Start 60-min Exam</button><button class="btn" onclick="startQuiz('free',0)">Practice Mode</button><button class="btn ac-entry" onclick="openAssessmentCenter()">🎯 Assessment Center Prep</button>`;
-  } else if(exam === 'gtbank') {
-    badge.className = 'exam-badge gtb';
-    badge.innerHTML = '🟠 GTBANK / GTCO ENTRY LEVEL PREP';
-    title.textContent = 'GTBank Assessment Practice';
-    sub.textContent = `${GTBANK.length} questions from GTBank/GTCO past papers and real assessment screenshots — Numerical, Verbal, Critical and Abstract Reasoning, with every figure included and every answer verified with a worked explanation. Each session draws ${SESSION_SIZE} random questions.`;
-    buildModeGrid([
-      {m:'timed',mins:60,badge:'⏱ 60 MIN EXAM',badgeCls:'timed',title:'Standard Exam',sub:'60 minutes. Mirrors real GTBank test conditions.'},
-      {m:'timed',mins:45,badge:'🔥 45 MIN BLITZ',badgeCls:'fast',title:'Speed Mode',sub:'45 minutes, maximum pressure. Build exam speed.'},
-      {m:'timed',mins:90,badge:'🕐 90 MIN MODE',badgeCls:'timed',title:'Extended Exam',sub:'90 minutes for a full-length, deeper practice session.'},
-      {m:'free',mins:0,badge:'📖 PRACTICE',badgeCls:'practice',title:'Practice Mode',sub:'No clock. Full explanations after every answer.'},
-    ]);
-    document.getElementById('home-btns').innerHTML = `<button class="btn primary" onclick="startQuiz('timed',60)">Start 60-min Exam</button><button class="btn" onclick="startQuiz('free',0)">Practice Mode</button>`;
-  } else if(exam === 'premiumtrust') {
-    badge.className = 'exam-badge ptb';
-    badge.innerHTML = '💎 PREMIUM TRUST BANK GRADUATE TRAINEE PREP';
-    title.textContent = 'Premium Trust Bank Assessment Practice';
-    sub.textContent = `${PREMIUM_TRUST.length} questions from Premium Trust Bank graduate trainee past papers — Numerical, Verbal, Abstract, Logical & Critical Reasoning, Banking/Economics and ICT. Every answer key entry was crosschecked (and corrected where wrong), with a worked explanation for every question. Each session draws ${SESSION_SIZE} random questions.`;
-    buildModeGrid([
-      {m:'timed',mins:60,badge:'⏱ 60 MIN EXAM',badgeCls:'timed',title:'Standard Exam',sub:'60 minutes. Mirrors real test conditions.'},
-      {m:'timed',mins:45,badge:'🔥 45 MIN BLITZ',badgeCls:'fast',title:'Speed Mode',sub:'45 minutes, maximum pressure. Build exam speed.'},
-      {m:'timed',mins:90,badge:'🕐 90 MIN MODE',badgeCls:'timed',title:'Extended Exam',sub:'90 minutes for a full-length, deeper practice session.'},
-      {m:'free',mins:0,badge:'📖 PRACTICE',badgeCls:'practice',title:'Practice Mode',sub:'No clock. Full explanations after every answer.'},
-    ]);
-    document.getElementById('home-btns').innerHTML = `<button class="btn primary" onclick="startQuiz('timed',60)">Start 60-min Exam</button><button class="btn" onclick="startQuiz('free',0)">Practice Mode</button>`;
-  } else if(exam === 'ey') {
-    badge.className = 'exam-badge ey';
-    badge.innerHTML = '🟡 EY JOBBERMAN APTITUDE PREP';
-    title.textContent = 'EY Assessment Practice System';
-    sub.textContent = `${EY_BANK.length} questions covering Logical, Numerical, Verbal, Critical Reasoning & more. Each session gives you ${SESSION_SIZE} random questions. Practice until you're exam-ready.`;
-    buildModeGrid([
-      {m:'blitz',mins:30,badge:'🔥 30 MIN BLITZ',badgeCls:'fast',title:'Speed Mode',sub:'30 minutes, maximum pressure. Build exam speed.'},
-      {m:'timed',mins:40,badge:'⏱ 40 MIN MODE',badgeCls:'timed',title:'Intensive Mode',sub:'40 minutes. A balanced challenge with time pressure.'},
-      {m:'timed',mins:60,badge:'✅ 60 MIN EXAM',badgeCls:'timed',title:'Standard Exam',sub:'60 minutes. Mirrors the real EY exam conditions.'},
-      {m:'free',mins:0,badge:'📖 PRACTICE',badgeCls:'practice',title:'Practice Mode',sub:'No clock. Instant feedback and full explanations after each answer.'},
-    ]);
-    document.getElementById('home-btns').innerHTML = `<button class="btn primary" onclick="startQuiz('timed',60)">Start 60-min Exam</button><button class="btn" onclick="startQuiz('free',0)">Practice Mode</button>`;
-  } else if(exam === 'seplat') {
-    badge.className = 'exam-badge sep';
-    badge.innerHTML = '🟢 SEPLAT PETROLEUM PREP';
-    title.textContent = 'SEPLAT Assessment Practice System';
-    sub.textContent = `${SEPLAT_BANK.length} questions from real SEPLAT past papers covering Numerical, Quantitative, Verbal Reasoning, Banking & Finance, and General Knowledge. Select a mode below to begin.`;
-    buildModeGrid([
-      {m:'timed',mins:60,badge:'⏱ 60 MIN EXAM',badgeCls:'timed',title:'Timed Mode',sub:'Simulate real exam conditions with a 60-minute countdown.'},
-      {m:'timed',mins:90,badge:'🕐 90 MIN MODE',badgeCls:'timed',title:'Extended Exam',sub:'90 minutes for a deeper practice session under timed pressure.'},
-      {m:'free',mins:0,badge:'📖 PRACTICE',badgeCls:'practice',title:'Practice Mode',sub:'No clock. See explanations immediately after each answer.'},
-    ]);
-    document.getElementById('home-btns').innerHTML = `<button class="btn primary" onclick="startQuiz('timed',60)">Start 60-min Exam</button><button class="btn" onclick="startQuiz('free',0)">Practice Mode</button>`;
-  } else if(exam === 'access') {
-    badge.className = 'exam-badge acc';
-    badge.innerHTML = '🔴 ACCESS BANK APTITUDE PREP';
-    title.textContent = 'Access Bank Assessment Practice System';
-    sub.textContent = `${ACCESS_BANK.length} questions from real Access Bank past papers covering Quantitative Reasoning, Verbal Reasoning, Critical Reasoning, Intelligence & Pattern Recognition, and General Knowledge. Select a mode below to begin.`;
-    buildModeGrid([
-      {m:'timed',mins:90,badge:'⏱ 90 MIN EXAM',badgeCls:'timed',title:'Full Exam Mode',sub:'90 minutes simulating real Access Bank exam conditions. No calculator allowed.'},
-      {m:'timed',mins:60,badge:'✅ 60 MIN BLITZ',badgeCls:'fast',title:'Speed Mode',sub:'60 minutes, maximum pressure. Build exam speed and accuracy.'},
-      {m:'timed',mins:45,badge:'🔥 45 MIN DRILL',badgeCls:'fast',title:'Intensive Drill',sub:'45 minutes — fast-paced practice for 50 focused questions.'},
-      {m:'free',mins:0,badge:'📖 PRACTICE',badgeCls:'practice',title:'Practice Mode',sub:'No clock. See explanations and answer rationale immediately after each answer.'},
-    ]);
-    document.getElementById('home-btns').innerHTML = `<button class="btn primary" onclick="startQuiz('timed',90)">Start 90-min Exam</button><button class="btn" onclick="startQuiz('free',0)">Practice Mode</button>`;
-  } else {
-    badge.className = 'exam-badge gen';
-    badge.innerHTML = '🔵 GENERAL APTITUDE PREP';
-    title.textContent = 'General Aptitude Practice System';
-    sub.textContent = `${GENERAL_APTITUDE_BANK.length} questions from real Workforce past papers covering Numerical and Verbal Reasoning. Select a mode below to begin.`;
-    buildModeGrid([
-      {m:'timed',mins:40,badge:'⏱ 40 MIN EXAM',badgeCls:'timed',title:'Timed Mode',sub:'Simulate real exam conditions with a 40-minute countdown.'},
-      {m:'timed',mins:60,badge:'✅ 60 MIN EXAM',badgeCls:'timed',title:'Extended Exam',sub:'60 minutes for a deeper practice session under timed pressure.'},
-      {m:'free',mins:0,badge:'📖 PRACTICE',badgeCls:'practice',title:'Practice Mode',sub:'No clock. See explanations immediately after each answer.'},
-    ]);
-    document.getElementById('home-btns').innerHTML = `<button class="btn primary" onclick="startQuiz('timed',40)">Start 40-min Exam</button><button class="btn" onclick="startQuiz('free',0)">Practice Mode</button>`;
+// ─── Small DOM helpers ───────────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  if (props) {
+    for (const [k, v] of Object.entries(props)) {
+      if (v === undefined || v === null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k === 'dataset') Object.assign(el.dataset, v);
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    }
   }
+  for (const k of kids.flat()) if (k !== null && k !== undefined && k !== false) el.append(k instanceof Node ? k : String(k));
+  return el;
+}
+const clear = (el) => { el.replaceChildren(); return el; };
+const fill = (el, ...kids) => { el.replaceChildren(...kids.flat().filter((k) => k !== null && k !== undefined && k !== false)); return el; };
+const fmt = (n) => Number(n).toLocaleString();
+const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const fmtTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; // a clock, not an index. taste-skill-ignore
+const meter = (pct, label) => { const s = h('span'); s.style.width = pct + '%'; return h('div', { class: 'meter', role: 'progressbar', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': label }, s); };
+const leaderRow = (left, right, cls = 'r-row') => h('p', { class: cls }, h('span', { text: left }), h('i', { 'aria-hidden': 'true' }), h('span', { text: right }));
 
-  buildHomeCats();
-  show('s-home');
+// ─── Storage (all access guarded: private mode or blocked storage must not break the app) ─
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage full or blocked */ } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } },
+};
+let PROGRESS = store.get('prep_progress', { exams: {}, sessions: [], favs: [] });
+const saveProgress = () => store.set('prep_progress', PROGRESS);
+const examProg = (id) => (PROGRESS.exams[id] = PROGRESS.exams[id] || { seen: {} });
+function completion(id) {
+  const total = (REG[id] && REG[id].count) || 0;
+  const seen = Object.keys(examProg(id).seen).length;
+  return { total, seen, pct: total ? Math.min(100, Math.round((seen / total) * 100)) : 0 };
+}
+function accuracy(id) {
+  const vals = Object.values(examProg(id).seen);
+  return vals.length ? Math.round((vals.filter(Boolean).length / vals.length) * 100) : null;
 }
 
-function buildModeGrid(modes) {
-  const grid = document.getElementById('mode-grid');
-  grid.innerHTML = '';
-  modes.forEach(m => {
-    const div = document.createElement('div');
-    div.className = 'mode-card';
-    div.onclick = () => startQuiz(m.m, m.mins);
-    div.innerHTML = `<span class="mc-badge ${m.badgeCls}">${m.badge}</span><div class="mc-title">${m.title}</div><div class="mc-sub">${m.sub}</div>`;
-    grid.appendChild(div);
-  });
+// ─── Question bank loading (one script per exam, loaded on demand) ───────────
+window.PREP_DATA = window.PREP_DATA || {};
+const loading = {};
+function loadBank(id) {
+  if (window.PREP_DATA[id]) return Promise.resolve(window.PREP_DATA[id]);
+  if (!EXAM[id]) return Promise.reject(new Error('Unknown exam'));
+  return (loading[id] = loading[id] || new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = `data/${id}.js`;
+    s.onload = () => (window.PREP_DATA[id] ? resolve(window.PREP_DATA[id]) : reject(new Error('Bank did not load')));
+    s.onerror = () => { delete loading[id]; reject(new Error('Could not load questions')); };
+    document.head.append(s);
+  }));
 }
 
-function goToSelect() {
-  if(timerInterval) clearInterval(timerInterval);
-  if(paused) { document.getElementById('pause-overlay').classList.remove('show'); paused=false; }
-  document.getElementById('cancel-overlay').classList.remove('show');
-  document.documentElement.style.setProperty('--accent', 'var(--blue)');
-  show('s-select');
+// ─── Topics (categories merged across exams) ─────────────────────────────────
+function topicKey(cat) { return cat.trim().toLowerCase().replace(/\s+/g, ' '); }
+function buildTopics() {
+  const t = {};
+  for (const [id, r] of Object.entries(REG)) {
+    for (const [cat, n] of Object.entries(r.cats || {})) {
+      const k = topicKey(cat);
+      t[k] = t[k] || { key: k, name: cat, count: 0, exams: new Set() };
+      t[k].count += n; t[k].exams.add(id);
+    }
+  }
+  return Object.values(t).filter((x) => x.count >= 15).sort((a, b) => b.count - a.count);
+}
+const TOPICS = buildTopics();
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
+let currentView = 'dashboard';
+function showView(name, anchor) {
+  if (session && session.timer && name !== 'quiz' && name !== 'result') stopTimer();
+  const changed = name !== currentView;
+  document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'v-' + name));
+  document.querySelectorAll('.bar-links [data-nav]').forEach((n) => n.classList.toggle('active', n.dataset.nav === name && (name !== 'dashboard' || !!anchor)));
+  document.body.classList.toggle('in-quiz', name === 'quiz');
+  currentView = name;
+  if (name === 'dashboard') renderHome();
+  if (name === 'topics') renderTopics();
+  if (name === 'progress') renderProgress();
+  if (name === 'ac') renderAc();
+  if (name === 'settings') renderSettings();
+  if (name === 'about') renderAbout();
+  if (anchor && $(anchor)) scrollToEl($(anchor), !changed);
+  else window.scrollTo({ top: 0, behavior: 'instant' });
+  observeRise();
 }
 
-// ─── HOME ─────────────────────────────────────────────────────────────────────
-function buildHomeCats() {
-  const el = document.getElementById('home-cats'); el.innerHTML = '';
-  ['All',...CATS].forEach(c => {
-    const b = document.createElement('button');
-    b.className = 'cat-chip' + (c==='All'&&selectedCats.size===0?' sel':selectedCats.has(c)?' sel':'');
-    b.textContent = c;
-    b.onclick = () => {
-      if(c==='All') selectedCats.clear();
-      else { selectedCats.has(c)?selectedCats.delete(c):selectedCats.add(c); }
-      buildHomeCats();
-    };
-    el.appendChild(b);
-  });
+function scrollToEl(el, smooth) {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 64, behavior: smooth && !reduce ? 'smooth' : 'instant' });
 }
 
-// ─── QUIZ ─────────────────────────────────────────────────────────────────────
-function startQuiz(m, mins) {
-  mode=m; minutes=mins; cur=0; answered={}; skipped=new Set(); correct=0; wrong=0; reviewing=false; paused=false;
-  let pool = selectedCats.size===0 ? [...BANK] : BANK.filter(q=>selectedCats.has(q.cat));
-  pool = shuffle(pool);
-  qs = pool.slice(0, SESSION_SIZE);
-  if(qs.length===0){ alert('No questions match selected categories.'); return; }
-  timeLeft = mins*60;
-  if(timerInterval) clearInterval(timerInterval);
-  const tel=document.getElementById('timer'), pb=document.getElementById('pause-btn');
-  if(m!=='free') {
-    tel.style.display=''; pb.style.display='';
-    tel.textContent=fmtTime(timeLeft); tel.className='timer-box';
-    timerInterval=setInterval(()=>{
-      if(paused) return;
-      timeLeft--;
-      tel.textContent=fmtTime(timeLeft);
-      tel.className='timer-box'+(timeLeft<120?' warn':'');
-      if(timeLeft<=0){ clearInterval(timerInterval); showResult(); }
-    },1000);
-  } else { tel.style.display='none'; pb.style.display='none'; }
-  show('s-quiz'); render();
+// ─── Home ────────────────────────────────────────────────────────────────────
+function testBar(e, open) {
+  const c = completion(e.id), r = REG[e.id] || { cats: {} }, acc = accuracy(e.id);
+  const cats = Object.entries(r.cats).sort((a, b) => b[1] - a[1]);
+  const panel = h('div', { class: 'bar-panel' },
+    h('p', { class: 'desc', text: e.desc }),
+    h('ul', { class: 'items' }, ...cats.map(([cat, n]) => h('li', {}, h('span', { text: cat }), h('i', { 'aria-hidden': 'true' }), h('span', { text: fmt(n) })))),
+    h('ul', { class: 'items' }, h('li', {}, h('span', { text: 'Answered so far' }), h('i', { 'aria-hidden': 'true' }), h('span', { text: `${fmt(c.seen)} of ${fmt(c.total)}${acc === null ? '' : `, ${acc}% right`}` }))),
+    meter(c.pct, `${e.name} completion`),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn', text: `Open ${e.name}`, onclick: () => openExam(e.id) }),
+      h('button', { class: 'btn quiet', text: 'Quick practice', onclick: () => { currentExam = e.id; selectedCats.clear(); startExam(M.free); } })));
+  return h('details', { class: 'bar-item', open: open || undefined },
+    h('summary', {}, h('span', { text: e.name }), h('span', { class: 'count', text: fmt(c.total) }), h('span', { class: 'plus', 'aria-hidden': 'true', text: '+' })),
+    panel);
 }
 
-function fmtTime(s){ const m=Math.floor(s/60),sec=s%60; return`${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`; }
+// Real worked answers printed on the showcase slips (copied verbatim from the banks).
+const SLIPS = [
+  { b: 'Dragnet, numerical', l: ['Which two media make £6.15bn of 2011 advertising?', 'TV 21% × 20.5 = 4.305', 'Magazines 9% × 20.5 = 1.845', '4.305 + 1.845 = 6.15', 'Answer: E, Magazines and Television'] },
+  { b: 'Workforce 5.0, verbal', l: ['Offshoring is synonymous with outsourcing.', 'Offshoring is outsourcing “when functions are moved abroad”.', 'A kind of outsourcing, not another word for it.', 'Answer: False'] },
+  { b: 'Workforce 4.0, numerical', l: ['Judy is twice Adam’s age; six years ago five times.', '2A − 6 = 5(A − 6)', '3A = 24, so A = 8', 'Answer: Judy is 16'] },
+  { b: 'Access Bank, quantitative', l: ['12 miles on a 4/5 tank. How far on 1/3?', 'Full tank = 12 ÷ 4/5 = 15 miles', '15 × 1/3 = 5', 'Answer: E, 5 miles'] },
+  { b: 'Deloitte, quantitative', l: ['Two taps fill 2/5 in 20 minutes; one runs dry.', 'Key says C, 15 minutes.', 'Working says 60 minutes.', 'You see both, with the reason.'] },
+  { b: 'First Bank, verbal', l: ['Prosecuting trespass is very difficult.', 'The passage says trespass is usually only a civil wrong.', 'It never says how hard prosecution is.', 'Answer: Can’t say'] },
+];
 
-function toggleChart(){
-  const el=document.getElementById('q-chart');
-  el.classList.toggle('expanded');
+function renderHome() {
+  const timing = $('v-dashboard').querySelector('.timing');
+  if (!timing.children.length) timing.append(...Array.from({ length: 40 }, () => h('span')));
+  $('hero-sub').textContent = `${fmt(TOTAL)} past questions from nine graduate-trainee tests, every one worked and explained.`;
+  fill($('test-bars'), ...EXAMS.map((e, i) => testBar(e, i === 0)));
+  if (!$('slips').children.length) {
+    const heights = [38, 30, 44, 34, 40, 27];
+    $('slips').append(...SLIPS.map((s, i) => {
+      const el = h('div', { class: 'slip rise' }, h('b', { text: s.b }), h('p', { class: 'cut', 'aria-hidden': 'true', text: '- - - - - - - - - - - - - - - -' }), ...s.l.map((x) => h('p', { text: x })));
+      el.style.height = heights[i] + 'svh';
+      el.style.setProperty('--d', i * 80 + 'ms');
+      return el;
+    }));
+  }
+  $('stats-total').textContent = fmt(TOTAL);
+  const groups = [['Banks', ['firstbank', 'gtbank', 'premiumtrust', 'access']], ['Firms', ['deloitte', 'workforce', 'ey']], ['Other', ['seplat', 'general']]];
+  fill($('stats-receipt'),
+    ...groups.flatMap(([g, ids]) => [h('p', { class: 'r-group', text: g }), ...ids.map((id) => leaderRow(EXAM[id].name, fmt(REG[id] ? REG[id].count : 0)))]),
+    h('p', { class: 'r-total' }, h('span', { text: 'Total' }), h('span', { text: fmt(TOTAL) })));
+  Try.ensure();
 }
 
-function togglePause() {
-  paused=!paused;
-  const overlay=document.getElementById('pause-overlay'), pauseBtn=document.getElementById('pause-btn');
-  if(paused) {
-    overlay.classList.add('show'); pauseBtn.textContent='▶ Resume';
-    document.getElementById('pause-time-display').textContent=fmtTime(timeLeft);
-  } else { overlay.classList.remove('show'); pauseBtn.textContent='⏸ Pause'; }
+// The live thing: one real question on the answer-sheet stub.
+const Try = {
+  pool: null, q: null,
+  async ensure() { if (!this.q) await this.next(); },
+  async next() {
+    try {
+      if (!this.pool) {
+        const bank = await loadBank('workforce');
+        this.pool = bank.filter((q) => !q.img && !q.passage && q.q.length < 170 && q.opts.length >= 4 && /Numerical|General|Critical/.test(q.cat));
+      }
+      this.q = this.pool[Math.floor(Math.random() * this.pool.length)];
+      this.paint();
+    } catch (e) { $('try-q').textContent = 'The sample question could not load. Choose a test below instead.'; }
+  },
+  paint(chosen) {
+    const q = this.q, done = chosen !== undefined;
+    $('try-src').textContent = `${q.src}, ${q.cat.toLowerCase()}`;
+    $('try-q').textContent = q.q;
+    fill($('try-opts'), ...q.opts.map((o, i) => {
+      let cls = 'bubble';
+      if (done && i === q.ans) cls += ' correct'; else if (done && i === chosen) cls += ' wrong';
+      return h('button', { class: cls, disabled: done, onclick: () => this.paint(i), 'aria-label': `Option ${KEYS[i]}: ${o}` },
+        h('span', { class: 'dot', text: KEYS[i] }), h('span', { text: o }));
+    }));
+    const res = $('try-result');
+    res.hidden = !done; $('try-next').hidden = !done;
+    if (done) {
+      const ok = chosen === q.ans;
+      fill(res, h('p', { class: 'verdict', text: ok ? 'Right.' : `Not quite. The answer is ${KEYS[q.ans]}.` }), h('p', { text: q.exp }));
+    }
+  },
+};
+
+// ─── Exam page ───────────────────────────────────────────────────────────────
+let currentExam = null;
+const selectedCats = new Set();
+function openExam(id) {
+  const e = EXAM[id]; if (!e) return;
+  currentExam = id; selectedCats.clear();
+  const r = REG[id] || { count: 0, cats: {} };
+  $('exam-title').textContent = e.name;
+  $('exam-sub').textContent = `${e.desc} Each paper draws ${SESSION_SIZE} questions at random.`;
+  const c = completion(id), acc = accuracy(id);
+  const fact = (b, s) => h('div', { class: 'fact' }, h('b', { text: b }), h('span', { text: s }));
+  fill($('exam-stats'), fact(fmt(r.count), 'questions'), fact(Object.keys(r.cats).length, 'topics'), fact(c.pct + '%', 'done'), fact(acc === null ? 'none yet' : acc + '%', 'right'));
+  renderCats();
+  fill($('mode-grid'), ...e.modes.map((m) => h('button', { class: 'mode', onclick: () => startExam(m) },
+    h('span', {}, h('span', { class: 'mode-title', text: m.title }), h('br'), h('span', { class: 'mode-sub', text: m.sub })),
+    h('span', { class: 'mode-time', text: m.mins ? `${m.mins} min` : 'no clock' }))));
+  fill($('exam-extra'), e.ac ? h('button', { class: 'btn quiet', text: 'Assessment centre prep', onclick: () => showView('ac') }) : null);
+  showView('exam');
+  loadBank(id).catch(() => {}); // warm the cache while the user picks a mode
+}
+function renderCats() {
+  const cats = (REG[currentExam] && REG[currentExam].cats) || {};
+  const all = h('button', { class: 'chip', 'aria-pressed': String(selectedCats.size === 0), onclick: () => { selectedCats.clear(); renderCats(); } }, 'All topics');
+  fill($('exam-cats'), all, ...Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([cat, n]) =>
+    h('button', { class: 'chip', 'aria-pressed': String(selectedCats.has(cat)), onclick: () => { selectedCats.has(cat) ? selectedCats.delete(cat) : selectedCats.add(cat); renderCats(); } },
+      cat, h('span', { class: 'n', text: n }))));
+}
+function renderTopics() {
+  fill($('grid-topics'), ...TOPICS.map((t) => h('button', { class: 'bar-row', onclick: () => startTopic(t) },
+    h('span', { text: t.name }),
+    h('span', { class: 'count', text: `${fmt(t.count)} from ${t.exams.size} test${t.exams.size > 1 ? 's' : ''}` }))));
 }
 
-function buildDots() {
-  const el=document.getElementById('dots'); el.innerHTML='';
-  qs.forEach((q,i)=>{
-    const d=document.createElement('div');
-    let cls='dot';
-    if(i===cur) cls+=' active';
-    else if(answered[i]!==undefined) cls+=(answered[i]===q.ans?' ok':' err');
-    else if(skipped.has(i)) cls+=' skipped';
-    d.className=cls; d.textContent=i+1; d.title=q.cat;
-    d.onclick=()=>{ cur=i; render(); };
-    el.appendChild(d);
-  });
+// ─── Entrances ───────────────────────────────────────────────────────────────
+let riser = null;
+function observeRise() {
+  if (!('IntersectionObserver' in window)) { document.querySelectorAll('.rise').forEach((el) => el.classList.add('in')); return; }
+  riser = riser || new IntersectionObserver((entries) => entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('in'); riser.unobserve(en.target); } }), { rootMargin: '0px 0px -8% 0px' });
+  document.querySelectorAll('.view.active .rise:not(.in), .foot .rise:not(.in)').forEach((el) => riser.observe(el));
 }
+
+// ─── Quiz session ────────────────────────────────────────────────────────────
+let session = null;
+async function startExam(m) {
+  let bank;
+  try { bank = await loadBank(currentExam); } catch (e) { alert('Sorry, the questions could not be loaded. Check your connection and try again.'); return; }
+  const pool = selectedCats.size ? bank.filter((q) => selectedCats.has(q.cat)) : bank;
+  begin({ kind: 'exam', examId: currentExam, label: EXAM[currentExam].name, mode: m.mode, mins: m.mins, pool, cats: [...selectedCats] });
+}
+async function startTopic(t) {
+  let pool = [];
+  try {
+    for (const id of t.exams) {
+      const bank = await loadBank(id);
+      pool = pool.concat(bank.filter((q) => topicKey(q.cat) === t.key).map((q) => Object.assign({ _exam: id }, q)));
+    }
+  } catch (e) { alert('Sorry, the questions could not be loaded.'); return; }
+  begin({ kind: 'topic', examId: null, label: t.name, mode: 'free', mins: 0, pool, topic: t });
+}
+function begin(cfg) {
+  const qs = shuffle([...cfg.pool]).slice(0, SESSION_SIZE);
+  if (!qs.length) { alert('No questions match the selected topics.'); return; }
+  stopTimer();
+  session = Object.assign(cfg, { qs, cur: 0, answered: {}, skipped: new Set(), correct: 0, wrong: 0, reviewing: false, paused: false, timeLeft: cfg.mins * 60, timer: null, saved: false });
+  const timed = cfg.mode !== 'free';
+  $('timer').hidden = !timed; $('pause-btn').hidden = !timed;
+  if (timed) { $('timer').textContent = fmtTime(session.timeLeft); startTimer(); }
+  showView('quiz');
+  render();
+}
+function startTimer() {
+  stopTimer();
+  session.timer = setInterval(() => {
+    if (session.paused) return;
+    session.timeLeft--;
+    const t = $('timer'); t.textContent = fmtTime(Math.max(0, session.timeLeft)); t.classList.toggle('warn', session.timeLeft < 120);
+    if (session.timeLeft <= 0) finish();
+  }, 1000);
+}
+function stopTimer() { if (session && session.timer) { clearInterval(session.timer); session.timer = null; } }
+const examOf = (q) => q._exam || session.examId;
 
 function render() {
-  if(cur>=qs.length){ showResult(); return; }
-  const q=qs[cur], total=qs.length;
-  document.getElementById('q-counter').textContent=reviewing?`Review: ${cur+1} of ${total}`:`Question ${cur+1} of ${total}`;
-  document.getElementById('prog-fill').style.width=`${((cur+1)/total*100).toFixed(0)}%`;
-  document.getElementById('s-correct').textContent=correct;
-  document.getElementById('s-wrong').textContent=wrong;
-  document.getElementById('s-remain').textContent=total-Object.keys(answered).length;
+  const s = session, q = s.qs[s.cur], n = s.qs.length, isAns = s.answered[s.cur] !== undefined;
+  $('q-counter').textContent = `${s.reviewing ? 'Review' : 'Question'} ${s.cur + 1} of ${n}`;
+  $('prog-fill').style.width = ((s.cur + 1) / n * 100).toFixed(0) + '%';
+  $('s-correct').textContent = s.correct; $('s-wrong').textContent = s.wrong;
+  $('s-remain').textContent = n - Object.keys(s.answered).length;
+  $('q-tag').textContent = q.cat;
+  $('q-src').textContent = [s.kind === 'topic' ? EXAM[examOf(q)].name : null, q.src].filter(Boolean).join(' · ');
 
-  // Tag
-  const tagEl=document.getElementById('q-tag');
-  tagEl.textContent=q.cat;
-  const TAG_CLS={firstbank:'fb-tag',ey:'ey-tag',seplat:'sep-tag',access:'acc-tag',general:'gen-tag'};
-  tagEl.className='q-tag '+(TAG_CLS[currentExam]||'gen-tag');
-  document.getElementById('q-text').textContent=q.q;
+  const pas = $('q-passage');
+  pas.hidden = !q.passage; $('q-passage-body').textContent = q.passage || '';
+  if (q.passage && pas.dataset.text !== q.passage) { pas.open = true; pas.dataset.text = q.passage; }
 
-  // Passage or data brief (comprehension passages, chart intros)
-  const passEl=document.getElementById('q-passage');
-  if(q.passage){
-    document.getElementById('q-passage-body').textContent=q.passage;
-    passEl.style.display='';
-    passEl.open=true;
-  } else {
-    passEl.style.display='none';
-    passEl.open=false;
-  }
+  $('q-text').textContent = q.q;
+  const fig = $('q-figure');
+  if (q.img) { fig.hidden = false; $('q-figure-img').src = q.img; $('q-figure-label').textContent = q.imgLabel || 'Figure'; }
+  else { fig.hidden = true; $('q-figure-img').removeAttribute('src'); }
 
-  // Chart image
-  const chartEl=document.getElementById('q-chart');
-  const chartImg=document.getElementById('q-chart-img');
-  if(q.img){
-    chartImg.src=q.img;
-    chartEl.style.display='';
-    chartEl.classList.remove('expanded');
-    document.getElementById('q-chart-label').textContent=q.imgLabel||'Figure';
-  } else {
-    chartEl.style.display='none';
-    chartImg.src='';
-  }
-
-  resetAiChat(q, answered[cur]!==undefined);
-  buildDots();
-
-  const keys=['A','B','C','D','E'], isAns=answered[cur]!==undefined;
-  const optsEl=document.getElementById('opts'); optsEl.innerHTML='';
-  q.opts.forEach((opt,i)=>{
-    const d=document.createElement('div');
-    d.className='opt'+(isAns?' locked':'');
-    if(isAns) {
-      if(i===q.ans) d.classList.add('correct');
-      else if(i===answered[cur]) d.classList.add('wrong');
-    } else { d.onclick=()=>pick(cur,i,q); }
-    d.innerHTML=`<span class="opt-key">${keys[i]}</span><span class="opt-txt">${opt}</span>`;
-    optsEl.appendChild(d);
+  const opts = clear($('opts'));
+  q.opts.forEach((o, i) => {
+    let cls = 'opt';
+    if (isAns && i === q.ans) cls += ' correct';
+    else if (isAns && i === s.answered[s.cur]) cls += ' wrong';
+    opts.append(h('button', { class: cls, role: 'listitem', disabled: isAns || s.reviewing, onclick: () => pick(i), 'aria-label': `Option ${KEYS[i]}: ${o}` },
+      h('span', { class: 'opt-key', text: KEYS[i] }), h('span', { class: 'opt-txt', text: o })));
   });
 
-  // Explanation box
-  const expBox=document.getElementById('exp-box');
-  const expHeader=document.getElementById('exp-header');
-  const expIcon=document.getElementById('exp-icon');
-  const expTitle=document.getElementById('exp-title');
-  const expBody=document.getElementById('exp-body');
-  expCollapsed=false;
-  document.getElementById('exp-toggle').textContent='▾';
-  expBody.style.display='';
+  const exp = $('exp');
+  if (isAns) {
+    const ok = s.answered[s.cur] === q.ans;
+    exp.hidden = false;
+    const head = $('exp-head'); head.className = 'exp-head ' + (ok ? 'ok' : 'err');
+    head.textContent = ok ? 'Right.' : `Not quite. You chose ${KEYS[s.answered[s.cur]]}.`;
+    fill($('exp-body'), 
+      h('div', { class: 'exp-answer', text: `Answer: ${KEYS[q.ans]}) ${q.opts[q.ans]}` }),
+      h('div', { text: q.exp || 'No written working for this question yet. Ask the tutor below.' }),
+      q.note ? h('div', { class: 'exp-note' }, h('strong', { text: 'Note on this question: ' }), q.note) : null);
+  } else if (s.reviewing) {
+    exp.hidden = false; $('exp-head').className = 'exp-head'; $('exp-head').textContent = 'Not answered';
+    fill($('exp-body'), h('div', { class: 'exp-answer', text: `Answer: ${KEYS[q.ans]}) ${q.opts[q.ans]}` }), h('div', { text: q.exp || '' }), q.note ? h('div', { class: 'exp-note', text: 'Note on this question: ' + q.note }) : null);
+  } else exp.hidden = true;
 
-  if(isAns) {
-    const ok=answered[cur]===q.ans;
-    expBox.classList.add('show');
-    expHeader.className='exp-header '+(ok?'ok':'err');
-    expIcon.textContent=ok?'✓':'✗';
-    expTitle.textContent=ok?'Correct! See explanation':'Incorrect — see explanation';
-    const expText=q.exp || (ok?'This is the correct answer based on the given information.':'The correct answer is option '+keys[q.ans]+': '+q.opts[q.ans]+'.');
-    const noteHtml=q.note?`<span class="exp-note"><strong>Note on this question:</strong> ${q.note}</span>`:'';
-    expBody.innerHTML=`<strong>Correct answer: ${keys[q.ans]}) ${q.opts[q.ans]}</strong><br><br>${expText}${noteHtml}`;
-  } else {
-    expBox.classList.remove('show');
-  }
-
-  document.getElementById('btn-prev').disabled=(cur===0);
-  document.getElementById('btn-next').textContent=cur===qs.length-1?'Finish ✓':'Next →';
-  document.getElementById('btn-skip').style.display=(isAns||reviewing)?'none':'';
+  Tutor.attach(q, isAns || s.reviewing ? s.answered[s.cur] : undefined, isAns || s.reviewing);
+  renderDots();
+  $('btn-prev').disabled = s.cur === 0;
+  $('btn-next').textContent = s.cur === n - 1 ? (s.reviewing ? 'Back to results' : 'Finish') : 'Next →';
+  $('btn-skip').hidden = isAns || s.reviewing;
 }
-
-function toggleExp() {
-  expCollapsed=!expCollapsed;
-  document.getElementById('exp-body').style.display=expCollapsed?'none':'';
-  document.getElementById('exp-toggle').textContent=expCollapsed?'▸':'▾';
+function renderDots() {
+  const s = session;
+  fill($('dots'), ...s.qs.map((q, i) => {
+    let cls = 'dot-btn';
+    if (i === s.cur) cls += ' current';
+    if (s.answered[i] !== undefined) cls += s.answered[i] === q.ans ? ' ok' : ' err';
+    else if (s.skipped.has(i)) cls += ' skipped';
+    return h('button', { class: cls, text: i + 1, title: q.cat, 'aria-label': `Go to question ${i + 1}`, onclick: () => { s.cur = i; render(); } });
+  }));
 }
-
-function pick(qi,sel,q) {
-  if(answered[qi]!==undefined) return;
-  answered[qi]=sel; skipped.delete(cur);
-  if(sel===q.ans) correct++; else wrong++;
+function pick(i) {
+  const s = session, q = s.qs[s.cur];
+  if (s.answered[s.cur] !== undefined || s.reviewing) return;
+  s.answered[s.cur] = i; s.skipped.delete(s.cur);
+  const ok = i === q.ans;
+  if (ok) s.correct++; else s.wrong++;
+  const ex = examOf(q);
+  if (ex && q.id) { examProg(ex).seen[q.id] = ok ? 1 : 0; saveProgress(); }
   render();
 }
-
 function go(dir) {
-  if(dir===1&&cur===qs.length-1){ if(timerInterval)clearInterval(timerInterval); showResult(); return; }
-  cur=Math.max(0,Math.min(qs.length-1,cur+dir)); render();
+  const s = session;
+  if (dir === 1 && s.cur === s.qs.length - 1) { if (s.reviewing) showView('result'); else finish(); return; }
+  s.cur = Math.max(0, Math.min(s.qs.length - 1, s.cur + dir)); render();
 }
-function skip(){ skipped.add(cur); if(cur<qs.length-1) cur++; render(); }
-
-// ─── RESULT ───────────────────��───────────────────────────────────────────────
-function showResult() {
-  if(timerInterval){ clearInterval(timerInterval); }
-  if(paused){ togglePause(); }
-  const attempted=Object.keys(answered).length;
-  const pct=attempted>0?Math.round(correct/attempted*100):0;
-  document.getElementById('r-pct').textContent=pct+'%';
-  const ring=document.getElementById('score-ring');
-  if(ring) ring.style.setProperty('--pct', pct+'%');
-  const EXAM_NAMES={firstbank:'First Bank',ey:'EY',seplat:'SEPLAT',access:'Access Bank',general:'General Aptitude'};
-  const examName=EXAM_NAMES[currentExam]||'General Aptitude';
-  const modeLabels={'blitz':`${minutes}-Minute Blitz`,'timed':`${minutes}-Minute Exam`,'free':'Practice Mode (Untimed)'};
-  document.getElementById('r-mode-label').textContent=`${examName} — ${modeLabels[mode]||'Practice Mode'}`;
-  let grade,color,msg;
-  if(pct>=80){ grade=`Excellent — ${examName} Ready 🎯`; color='var(--green)'; msg='Outstanding performance! You are well prepared. Review any missed questions to push even higher.'; }
-  else if(pct>=65){ grade='Good — Minor Gaps'; color='var(--accent)'; msg='Strong attempt. Read the explanations for questions you missed and aim above 80% on your next try.'; }
-  else if(pct>=50){ grade='Developing — Needs Practice'; color='var(--amber)'; msg='Solid foundation. Focus on your weakest categories and drill those question types consistently.'; }
-  else { grade='Keep Going — You Can Do This'; color='var(--red)'; msg='Don\'t be discouraged. Study the explanations carefully, identify your weak areas, and retake regularly.'; }
-  const gradeEl=document.getElementById('r-grade'); gradeEl.textContent=grade; gradeEl.style.color=color;
-  const skippedCount=qs.length-attempted;
-  document.getElementById('r-msg').textContent=`${correct} of ${attempted} questions answered correctly${skippedCount>0?` (${skippedCount} skipped)`:''}.  ${msg}`;
-  const bd=document.getElementById('r-breakdown'); bd.innerHTML='';
-  CATS.forEach(cat=>{
-    const catQs=qs.filter(q=>q.cat===cat); if(!catQs.length) return;
-    const catIdx=catQs.map(q=>qs.indexOf(q));
-    const catAns=catIdx.filter(i=>answered[i]!==undefined);
-    const catCor=catIdx.filter(i=>answered[i]===qs[i].ans);
-    const cp=catAns.length?Math.round(catCor.length/catAns.length*100):0;
-    const fillColor=cp>=80?'var(--green)':cp>=60?'var(--accent)':cp>=40?'var(--amber)':'var(--red)';
-    const d=document.createElement('div'); d.className='bd-item';
-    d.innerHTML=`<div class="bd-cat">${cat}</div><div class="bd-val">${catCor.length}/${catAns.length} correct — ${cp}%</div><div class="bd-bar"><div class="bd-fill" style="width:${cp}%;background:${fillColor}"></div></div>`;
-    bd.appendChild(d);
-  });
-  show('s-result');
+function skip() { const s = session; s.skipped.add(s.cur); if (s.cur < s.qs.length - 1) s.cur++; render(); }
+function togglePause() {
+  const s = session; if (!s || s.mode === 'free') return;
+  s.paused = !s.paused;
+  $('pause-overlay').hidden = !s.paused;
+  $('pause-btn').textContent = s.paused ? 'Resume' : 'Pause';
+  $('pause-time').textContent = fmtTime(Math.max(0, s.timeLeft));
 }
 
-function reviewMode() {
-  reviewing=true; cur=0;
-  show('s-quiz');
-  document.getElementById('timer').style.display='none';
-  document.getElementById('pause-btn').style.display='none';
-  render();
-}
-
-function goHome() {
-  if(timerInterval) clearInterval(timerInterval);
-  if(paused) togglePause();
-  selectedCats.clear();
-  buildHomeCats();
-  show('s-home');
-}
-
-function confirmCancel() {
-  if(paused) togglePause();
-  document.getElementById('cancel-overlay').classList.add('show');
-}
-function closeCancelOverlay() { document.getElementById('cancel-overlay').classList.remove('show'); }
-function cancelAssessment() {
-  document.getElementById('cancel-overlay').classList.remove('show');
-  if(paused) togglePause();
-  if(timerInterval){ clearInterval(timerInterval); timerInterval=null; }
-  showResult();
-}
-
-// ─── UTILS ────────────────────────────────────────────────────────────────────
-function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
-
-// ─── AI CHAT ─────────────────────────────────────────────────────────────────
-const CHAT_STORE_KEY = 'prep_chat_histories';
-const CHAT_STORE = JSON.parse(localStorage.getItem(CHAT_STORE_KEY) || '{}');
-let aiChatOpen=false, aiChatQ=null, aiChatHistory=[], aiChatLocked=false;
-
-function openAiChat(){
-  const chatEl=document.getElementById('ai-chat'), btnEl=document.getElementById('ai-chat-btn');
-  if(!aiChatOpen){
-    chatEl.classList.add('open'); btnEl.style.display='none'; aiChatOpen=true;
-    const msgs=document.getElementById('ai-messages');
-    if(msgs.children.length===0) addAiMsg('ai',"I can explain why the correct answer is right and why other options don't work. What would you like to know?");
-    chatEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+// ─── Results ─────────────────────────────────────────────────────────────────
+function finish() {
+  const s = session; stopTimer();
+  if (s.paused) togglePause();
+  $('end-overlay').hidden = true;
+  const attempted = Object.keys(s.answered).length;
+  const pct = attempted ? Math.round((s.correct / attempted) * 100) : 0;
+  $('r-pct').textContent = pct + '%';
+  const modeLabel = s.mode === 'free' ? 'practice, no clock' : `${s.mins}-minute paper`;
+  $('r-mode').textContent = `${s.label}, ${modeLabel}`;
+  let grade, msg;
+  if (pct >= 80) { grade = 'Ready for the real paper.'; msg = 'Review anything you missed to push higher.'; }
+  else if (pct >= 65) { grade = 'Good, with a few gaps.'; msg = 'Read the working for the ones you missed and aim for 80%.'; }
+  else if (pct >= 50) { grade = 'A solid base.'; msg = 'Drill the weakest topics below.'; }
+  else { grade = 'Keep going.'; msg = 'Read the working closely, find your weak topics and sit another paper soon.'; }
+  $('r-grade').textContent = grade;
+  const skipped = s.qs.length - attempted;
+  $('r-msg').textContent = `${s.correct} of ${attempted} right${skipped ? `, ${skipped} unanswered` : ''}. ${msg}`;
+  const cats = [...new Set(s.qs.map((q) => q.cat))];
+  fill($('r-breakdown'), h('p', { class: 'r-group', text: 'By topic' }), ...cats.flatMap((cat) => {
+    const idx = s.qs.map((q, i) => (q.cat === cat ? i : -1)).filter((i) => i >= 0);
+    const ans = idx.filter((i) => s.answered[i] !== undefined), cor = idx.filter((i) => s.answered[i] === s.qs[i].ans);
+    const cp = ans.length ? Math.round((cor.length / ans.length) * 100) : 0;
+    const bar = h('span'); bar.style.width = cp + '%';
+    return [leaderRow(cat, `${cor.length} of ${ans.length}`), h('div', { class: 'bd-meter', 'aria-hidden': 'true' }, bar)];
+  }), h('p', { class: 'r-total' }, h('span', { text: 'Score' }), h('span', { text: `${s.correct} of ${attempted}, ${pct}%` })));
+  if (!s.saved && attempted) {
+    s.saved = true;
+    PROGRESS.sessions.unshift({ exam: s.examId, label: s.label, mode: modeLabel, correct: s.correct, attempted, total: s.qs.length, at: Date.now() });
+    PROGRESS.sessions = PROGRESS.sessions.slice(0, 40);
+    saveProgress();
   }
+  showView('result');
+}
+function review() { session.reviewing = true; session.cur = 0; $('timer').hidden = true; $('pause-btn').hidden = true; showView('quiz'); render(); }
+function again() { if (session.kind === 'topic') startTopic(session.topic); else openExam(session.examId); }
+
+// ─── Progress view ───────────────────────────────────────────────────────────
+function renderProgress() {
+  fill($('progress-grid'), ...EXAMS.map((e) => {
+    const c = completion(e.id), acc = accuracy(e.id);
+    return h('button', { class: 'prog-row', onclick: () => openExam(e.id) },
+      h('span', { class: 'mode-title', text: e.name }),
+      h('span', { class: 'sub', text: c.seen ? `${c.pct}% done, ${acc}% right` : 'not started' }),
+      meter(c.pct, `${e.name} completion`));
+  }));
+  const list = clear($('progress-sessions'));
+  if (!PROGRESS.sessions.length) list.append(h('p', { text: 'No finished papers yet. Your scores will be listed here.' }));
+  else list.append(h('p', { class: 'r-group', text: 'Latest first' }), ...PROGRESS.sessions.map((x) => leaderRow(`${x.label}, ${new Date(x.at).toLocaleDateString()}`, `${x.correct} of ${x.attempted}, ${Math.round((x.correct / x.attempted) * 100)}%`)));
 }
 
-function toggleAiChat(){
-  const chatEl=document.getElementById('ai-chat'), body=document.getElementById('ai-messages');
-  const inputRow=chatEl.querySelector('.ai-input-row'), toggleBtn=document.getElementById('ai-chat-toggle-btn');
-  const collapsed=body.style.display==='none';
-  body.style.display=collapsed?'':'none';
-  inputRow.style.display=collapsed?'':'none';
-  toggleBtn.textContent=collapsed?'▾ Hide':'▸ Show';
-}
-
-function addAiMsg(role,text){
-  const msgs=document.getElementById('ai-messages');
-  const d=document.createElement('div');
-  d.className='ai-msg '+role; d.textContent=text;
-  msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight;
-  return d;
-}
-
-async function sendAiMsg(){
-  if(aiChatLocked||!aiChatQ) return;
-  const input=document.getElementById('ai-input'), sendBtn=document.getElementById('ai-send');
-  const userText=input.value.trim(); if(!userText) return;
-  if(userText.toLowerCase()==='reset key'){ localStorage.removeItem('GROQ_API_KEY'); addAiMsg('ai','Saved Groq key cleared. Send any message and I will ask you for a new key.'); return; }
-  input.value=''; aiChatLocked=true; sendBtn.disabled=true; sendBtn.textContent='...';
-  addAiMsg('user',userText);
-  const thinkEl=addAiMsg('thinking','Thinking…');
-  const q=aiChatQ, keys=['A','B','C','D','E'];
-  const optsText=q.opts.map((o,i)=>`${keys[i]}: ${o}`).join('\n');
-  const correctLetter=keys[q.ans], correctText=q.opts[q.ans];
-  const systemPrompt=`You are a concise exam tutor helping a student prepare for the ${({firstbank:'First Bank graduate trainee',ey:'EY graduate aptitude',seplat:'SEPLAT petroleum company',access:'Access Bank graduate trainee',gtbank:'GTBank/GTCO entry-level recruitment',premiumtrust:'Premium Trust Bank graduate trainee'})[currentExam]||'Workforce general aptitude'} exam.
-The student has just answered a question. Your job is to explain the reasoning clearly and directly.
-
-QUESTION:
-${q.q}
-
-OPTIONS:
-${optsText}
-
-CORRECT ANSWER: ${correctLetter}) ${correctText}
-OFFICIAL EXPLANATION: ${q.exp}
-
-RULES:
-- Be direct and specific. Reference option letters (A, B, C, D) by name.
-- Keep answers under 120 words unless genuinely needed.
-- Never say "great question" or use filler phrases.
-- If the student asks why an option is wrong, explain the specific flaw in that option's logic.
-- Use the official explanation as your source of truth.`;
-  aiChatHistory.push({role:'user',content:userText});
-
-  const qKey = currentExam + '_' + q.q;
-  CHAT_STORE[qKey] = aiChatHistory;
-  localStorage.setItem(CHAT_STORE_KEY, JSON.stringify(CHAT_STORE));
-
-  let apiKey = localStorage.getItem('GROQ_API_KEY');
-  if (!apiKey) {
-    apiKey = prompt('Please enter your Groq API Key to use the AI Assistant (this is saved locally in your browser):');
-    if (apiKey) {
-      localStorage.setItem('GROQ_API_KEY', apiKey);
-    } else {
-      thinkEl.remove();
-      addAiMsg('ai', 'Error: A Groq API Key is required to use the AI assistant.');
-      return;
-    }
-  }
-
-  const MODELS=['openai/gpt-oss-120b','openai/gpt-oss-20b','qwen/qwen3.6-27b'];
-  let res=null, data=null, lastErr='';
-  for (const model of MODELS) {
+// ─── AI tutor ────────────────────────────────────────────────────────────────
+const DEFAULT_MODELS = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'llama-3.3-70b-versatile', 'qwen/qwen3.6-27b'];
+const DEFAULT_VISION = 'meta-llama/llama-4-scout-17b-16e-instruct';
+const KEY_NAME = 'GROQ_API_KEY';
+const Key = {
+  get() { try { return sessionStorage.getItem(KEY_NAME) || localStorage.getItem(KEY_NAME) || ''; } catch (e) { return ''; } },
+  set(v, remember) {
     try {
-      res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization':`Bearer ${apiKey}`
-      },
-      body:JSON.stringify({
-        model:model,
-        messages:[
-          {role:'system',content:systemPrompt},
-          ...aiChatHistory
-        ],
-        temperature:0.2,
-        max_tokens:512
-      })
-    });
-      const txt=await res.text();
-      try{ data=JSON.parse(txt); }catch(e){ data=null; lastErr='Non-JSON response: '+txt.slice(0,200); }
-      if(res.ok && data && data.choices) break;
-      lastErr = (data&&data.error&&data.error.message)?data.error.message:('HTTP '+res.status);
-      if(res.status===401||res.status===403) break;
-      res=null;
-    } catch(e) { lastErr=e.message||'network error'; res=null; }
-  }
-  if(!res){
-  if(res && (res.status===401||res.status===403)){
-      localStorage.removeItem('GROQ_API_KEY');
-      thinkEl.remove(); addAiMsg('ai','That saved Groq API key was rejected, so I cleared it. Press Send again and I will ask you for a fresh key.');
-      aiChatLocked=false; sendBtn.disabled=false; sendBtn.textContent='Ask'; input.focus();
-      return;
+      sessionStorage.setItem(KEY_NAME, v);
+      if (remember) localStorage.setItem(KEY_NAME, v); else localStorage.removeItem(KEY_NAME);
+    } catch (e) { /* storage blocked: key lives only for this page */ Key.mem = v; }
+  },
+  clear() { try { sessionStorage.removeItem(KEY_NAME); localStorage.removeItem(KEY_NAME); } catch (e) { /* ignore */ } Key.mem = ''; },
+  remembered() { try { return !!localStorage.getItem(KEY_NAME); } catch (e) { return false; } },
+};
+const models = () => { const m = store.get('prep_ai_models', null); return Array.isArray(m) && m.length ? m : DEFAULT_MODELS; };
+const visionModel = () => { const v = store.get('prep_ai_vision', null); return v === null ? DEFAULT_VISION : v; };
+
+const Tutor = {
+  q: null, chosen: undefined, history: [], busy: false,
+  chats: store.get('prep_chat_v2', {}),
+  attach(q, chosen, enabled) {
+    this.q = q; this.chosen = chosen; this.busy = false;
+    $('tutor').hidden = !enabled;
+    $('tutor-send').disabled = false;
+    this.history = (this.chats[q.id] && this.chats[q.id].msgs) || [];
+    const open = this.history.length > 0;
+    $('tutor-panel').hidden = !open; $('tutor-open').hidden = open;
+    this.paint();
+  },
+  open() { $('tutor-panel').hidden = false; $('tutor-open').hidden = true; this.paint(); $('tutor-input').focus(); },
+  save() {
+    if (!this.q || !this.q.id) return;
+    this.chats[this.q.id] = { at: Date.now(), msgs: this.history.slice(-20) };
+    const ids = Object.keys(this.chats);
+    if (ids.length > 150) ids.sort((a, b) => this.chats[a].at - this.chats[b].at).slice(0, ids.length - 150).forEach((k) => delete this.chats[k]);
+    store.set('prep_chat_v2', this.chats);
+  },
+  clearChat() { this.history = []; if (this.q) delete this.chats[this.q.id]; store.set('prep_chat_v2', this.chats); this.paint(); },
+  paint(extra) {
+    const box = clear($('tutor-msgs'));
+    $('tutor-model').textContent = this.q && this.q.img && visionModel() ? 'reads the figure too' : '';
+    if (!this.history.length && !extra) box.append(h('div', { class: 'msg assistant', text: 'Ask me why the answer is right, why another option is wrong, or for a faster method.' }));
+    for (const m of this.history) box.append(renderMsg(m.role, m.content));
+    if (!Key.get()) box.append(keyForm());
+    if (extra) box.append(extra);
+    box.scrollTop = box.scrollHeight;
+  },
+  systemPrompt() {
+    const q = this.q, ex = EXAM[examOf(q)];
+    const lines = [
+      `You are a concise, accurate tutor helping a student prepare for the ${ex ? ex.name + ' (' + ex.org + ')' : 'graduate aptitude'} recruitment test.`,
+      'Explain the reasoning behind the question below. Use the official answer as the source of truth; if you believe it is wrong, say so politely and show your working.',
+      '', `TOPIC: ${q.cat}`,
+    ];
+    if (q.passage) lines.push('', 'PASSAGE / DATA BRIEF:', q.passage.slice(0, 6000));
+    if (q.img) lines.push('', `FIGURE: the question uses a figure (“${q.imgLabel || 'figure'}”).${this.withImage ? ' It is attached to the first user message.' : ' You cannot see it, so rely on the official explanation for any values read from it and say so if needed.'}`);
+    lines.push('', 'QUESTION:', q.q, '', 'OPTIONS:', ...q.opts.map((o, i) => `${KEYS[i]}) ${o}`),
+      '', `CORRECT ANSWER: ${KEYS[q.ans]}) ${q.opts[q.ans]}`);
+    if (this.chosen !== undefined) lines.push(`STUDENT CHOSE: ${KEYS[this.chosen]}) ${q.opts[this.chosen]}${this.chosen === q.ans ? ' (correct)' : ' (incorrect)'}`);
+    if (q.exp) lines.push('', 'OFFICIAL EXPLANATION:', q.exp);
+    if (q.note) lines.push('', 'EDITOR’S NOTE:', q.note);
+    lines.push('', 'RULES:', '- Be direct. Refer to options by letter.', '- Keep replies under ~150 words unless a calculation needs more steps.',
+      '- Show arithmetic line by line when numbers are involved.', '- No filler such as “great question”.', '- Plain text; **bold** is allowed sparingly.');
+    return lines.join('\n');
+  },
+  async send(text) {
+    text = (text || '').trim();
+    if (!text || this.busy || !this.q) return;
+    if (!Key.get()) { this.paint(); return; }
+    this.busy = true; $('tutor-send').disabled = true;
+    this.history.push({ role: 'user', content: text });
+    const thinking = h('div', { class: 'msg thinking', text: 'Thinking…' });
+    this.paint(thinking);
+    try {
+      const reply = await this.ask();
+      this.history.push({ role: 'assistant', content: reply });
+      this.save();
+      this.paint();
+    } catch (err) {
+      this.history.pop(); // keep history clean so the question can be re-sent
+      this.paint(renderMsg('system', err.message));
+      if (err.auth) { Key.clear(); this.paint(renderMsg('system', err.message)); }
+      $('tutor-input').value = text;
+    } finally {
+      this.busy = false; $('tutor-send').disabled = false;
     }
-    thinkEl.remove(); addAiMsg('ai','Groq could not answer after trying several models. Error: '+lastErr+' — you can type reset key to enter a fresh key.');
-    aiChatLocked=false; sendBtn.disabled=false; sendBtn.textContent='Ask'; input.focus();
-    return;
-  }
-  { // success path
-    if(false){
+  },
+  async ask() {
+    const key = Key.get();
+    let image = null;
+    const vm = visionModel();
+    if (this.q.img && vm) image = await toDataUrl(this.q.img).catch(() => null);
+    const attempts = [];
+    if (image) attempts.push({ model: vm, image });
+    for (const m of models()) attempts.push({ model: m, image: null });
+    let last = '';
+    for (const a of attempts) {
+      this.withImage = !!a.image;
+      const msgs = this.history.map((m, i) => (i === 0 && a.image
+        ? { role: 'user', content: [{ type: 'text', text: m.content }, { type: 'image_url', image_url: { url: a.image } }] }
+        : { role: m.role, content: m.content }));
+      let res;
+      try {
+        res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+          body: JSON.stringify({ model: a.model, messages: [{ role: 'system', content: this.systemPrompt() }, ...msgs], temperature: 0.2, max_tokens: 700 }),
+          referrerPolicy: 'no-referrer',
+        });
+      } catch (e) { last = 'Network error. Check your connection.'; continue; }
+      let data = null;
+      try { data = await res.json(); } catch (e) { /* non-JSON body */ }
+      if (res.status === 401 || res.status === 403) {
+        const err = new Error('Groq rejected the saved API key, so it has been removed. Enter a valid key to continue.'); err.auth = true; throw err;
+      }
+      const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (res.ok && content) return cleanReply(content);
+      last = (data && data.error && data.error.message) || `HTTP ${res.status}`;
+      if (res.status === 429) last = 'Rate limit reached on your Groq key. Wait a minute and try again.';
     }
-    const reply=data.choices&&data.choices[0]&&data.choices[0].message?data.choices[0].message.content:('Unexpected Groq response: '+JSON.stringify(data).slice(0,200));
-    thinkEl.remove(); addAiMsg('ai',reply);
-    aiChatHistory.push({role:'assistant',content:reply});
-    
-    CHAT_STORE[qKey] = aiChatHistory;
-    localStorage.setItem(CHAT_STORE_KEY, JSON.stringify(CHAT_STORE));
-  }
-  aiChatLocked=false; sendBtn.disabled=false; sendBtn.textContent='Ask'; input.focus();
+    throw new Error('The tutor could not answer right now. ' + last + ' You can change the model list in Settings.');
+  },
+};
+function cleanReply(t) { return String(t).replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^#{1,6}\s*/gm, '').trim() || '(empty reply)'; }
+function renderMsg(role, content) {
+  const el = h('div', { class: 'msg ' + role });
+  // Safe minimal formatting: **bold** becomes <strong>, everything else stays text.
+  String(content).split(/(\*\*[^*\n]+\*\*)/g).forEach((part) => {
+    if (/^\*\*[^*\n]+\*\*$/.test(part)) el.append(h('strong', { text: part.slice(2, -2) })); else if (part) el.append(part);
+  });
+  return el;
 }
-
-function resetAiChat(q,isAnswered){
-  aiChatQ=isAnswered?q:null;
-  aiChatOpen=false; aiChatLocked=false;
-  const chatEl=document.getElementById('ai-chat'), btnEl=document.getElementById('ai-chat-btn');
-  const msgs=document.getElementById('ai-messages'), toggleBtn=document.getElementById('ai-chat-toggle-btn');
-  const inputRow=chatEl.querySelector('.ai-input-row'), body=document.getElementById('ai-messages');
-  chatEl.classList.remove('open'); msgs.innerHTML='';
-  toggleBtn.textContent='▾ Hide'; body.style.display=''; inputRow.style.display='';
-  
-  if(isAnswered){
-    const qKey = currentExam + '_' + q.q;
-    aiChatHistory = CHAT_STORE[qKey] || [];
-    btnEl.classList.add('visible'); btnEl.style.display='';
-    if(aiChatHistory.length > 0) {
-      aiChatHistory.forEach(msg => addAiMsg(msg.role, msg.content));
-      chatEl.classList.add('open');
-      btnEl.style.display='none';
-      aiChatOpen=true;
-    }
-  } else {
-    aiChatHistory = [];
-    btnEl.classList.remove('visible'); btnEl.style.display='none';
-  }
-}
-
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-// Start on exam select screen
-
-// ─── THEME ────────────────────────────────────────────────────────────────
-function applyTheme(t){
-  document.documentElement.setAttribute('data-theme', t);
-  const icon=document.getElementById('theme-icon'), label=document.getElementById('theme-label');
-  if(icon) icon.textContent = t==='dark' ? '◑' : '◐';
-  if(label) label.textContent = t==='dark' ? 'Light' : 'Dark';
-  try{ localStorage.setItem('prep_theme', t); }catch(e){}
-}
-function toggleTheme(){
-  applyTheme(document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
-}
-
-// ─── KEYBOARD SHORTCUTS ──────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  const quiz=document.getElementById('s-quiz');
-  if(!quiz || !quiz.classList.contains('active')) return;
-  const t=e.target;
-  if(t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA')) return;
-  if(paused){ if(e.key===' '){ e.preventDefault(); togglePause(); } return; }
-  const q=qs[cur];
-  if(!q) return;
-  if(e.key==='ArrowRight'){ e.preventDefault(); go(1); return; }
-  if(e.key==='ArrowLeft'){ e.preventDefault(); if(cur>0) go(-1); return; }
-  if(e.key===' '){ e.preventDefault(); if(mode!=='free') togglePause(); return; }
-  let idx=-1;
-  const k=e.key.toUpperCase();
-  if('ABCDE'.indexOf(k)>=0) idx='ABCDE'.indexOf(k);
-  else if(k>='1' && k<='5') idx=parseInt(k,10)-1;
-  if(idx>=0 && idx<q.opts.length && answered[cur]===undefined && !reviewing){
+function keyForm() {
+  const input = h('input', { type: 'password', placeholder: 'Paste your Groq API key (gsk_…)', autocomplete: 'off', spellcheck: 'false', maxlength: '200', 'aria-label': 'Groq API key' });
+  const remember = h('input', { type: 'checkbox' });
+  const form = h('form', { class: 'tutor-key' },
+    h('strong', { text: 'Connect the AI tutor' }),
+    h('span', { class: 'muted small', text: 'The tutor uses your own free Groq key (console.groq.com → API Keys). It is sent only to api.groq.com.' }),
+    input,
+    h('label', { class: 'check small' }, remember, 'Remember on this device'),
+    h('button', { class: 'btn primary sm', type: 'submit', text: 'Save key' }));
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
-    pick(cur, idx, q);
+    const v = input.value.trim();
+    if (!/^[\w-]{20,200}$/.test(v)) { input.setCustomValidity('That does not look like a Groq key.'); input.reportValidity(); return; }
+    Key.set(v, remember.checked); Tutor.paint();
+  });
+  input.addEventListener('input', () => input.setCustomValidity(''));
+  return form;
+}
+async function toDataUrl(src) {
+  const res = await fetch(src);
+  const blob = await res.blob();
+  if (blob.size > 3.5e6) throw new Error('image too large');
+  return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(blob); });
+}
+
+// ─── Settings ────────────────────────────────────────────────────────────────
+function applyTheme(pref) {
+  try { localStorage.setItem('prep_theme', pref); } catch (e) { /* ignore */ }
+  const dark = pref === 'dark' || (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  $('theme-label').textContent = dark ? 'Light' : 'Dark';
+  const meta = document.querySelector('meta[name=color-scheme]'); if (meta) meta.content = dark ? 'dark' : 'light';
+  document.querySelectorAll('[data-theme-set]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeSet === pref)));
+}
+function currentThemePref() { try { return localStorage.getItem('prep_theme') || 'system'; } catch (e) { return 'system'; } }
+function renderSettings() {
+  applyTheme(currentThemePref());
+  $('key-input').value = '';
+  $('key-remember').checked = Key.remembered();
+  $('key-status').textContent = Key.get() ? `A key is saved ${Key.remembered() ? 'on this device' : 'for this tab only'}.` : 'No key saved.';
+  $('model-input').value = models().join(', ');
+  $('vision-input').value = visionModel();
+}
+
+// ─── About ───────────────────────────────────────────────────────────────────
+function renderAbout() {
+  const sec = (title, ...paras) => [h('h2', { text: title }), ...paras.map((p) => (Array.isArray(p) ? h('ul', {}, ...p.map((li) => h('li', { text: li }))) : h('p', { text: p })))];
+  fill($('about-body'), 
+    ...sec('Where the questions come from', 'Every bank was rebuilt from the past-question PDFs and screenshots for each employer. Questions were re-solved one by one, not copied from the printed keys.'),
+    ...sec('What was checked',
+      ['Where the source document has an answer key, that key is the answer used here. Every question was also worked independently; where the working disagrees with the key, the note on the question shows the alternative answer and why.',
+        'Where a document has no answer key (Workforce 5.0, the EY screenshots and a few individual items), the answer was worked out independently.',
+        'Questions that could not be answered reliably (missing options, broken figures, contradictory data or unverifiable trivia) were removed rather than guessed.',
+        'Reading passages and data tables were re-attached to the questions that depend on them, and figures were extracted from the original documents.',
+        'Every question has a worked explanation. The AI tutor receives the passage, figure (when a vision model is set), options, answer, your choice and the explanation.']),
+    ...sec('Exam notes',
+      ['Deloitte: the study pack’s seven sample papers repeat many items; duplicates were merged. It includes the 100-question Dragnet numerical set, with each chart re-checked.',
+        'Workforce: five ability papers. Paper 5.0 has no published key, so its answers were worked out independently and are marked as such.',
+        'General Aptitude: a mixed numerical and verbal practice set, useful for any test.']),
+    ...sec('Privacy', 'Progress, favourites and tutor chats stay in your browser. The only outside service the app talks to is Groq, and only when you use the AI tutor with your own key.'));
+}
+
+// ─── Assessment centre (First Bank) ──────────────────────────────────────────
+let acTab = 'framework';
+const AC_TABS = [['framework', 'Five-step framework'], ['cases', 'Case studies'], ['group', 'Group exercise'], ['cbi', 'Interview'], ['presentation', 'Presentation']];
+function renderAc() {
+  if (typeof AC_CONTENT === 'undefined') return;
+  fill($('ac-tabs'), ...AC_TABS.map(([k, l]) => h('button', { class: 'tab', role: 'tab', 'aria-selected': String(acTab === k), text: l, onclick: () => { acTab = k; renderAc(); } })));
+  const body = clear($('ac-body')), A = AC_CONTENT;
+  if (acTab === 'framework') {
+    body.append(h('div', { class: 'ac-note' }, h('b', { text: A.framework.title + '. ' }), A.framework.note),
+      ...A.framework.steps.map((s) => h('div', { class: 'fw-step' }, h('div', { class: 'fw-num', text: s.n }), h('div', {}, h('h3', { text: s.title }), h('p', { text: s.body })))));
+  } else if (acTab === 'cases') {
+    body.append(h('div', { class: 'ac-note', text: 'Read the scenario, write your own answer with the 5-step framework, then open the model answer.' }),
+      ...A.cases.map((c) => {
+        const a = c.answer, ans = h('div', { class: 'ac-ans' });
+        let n = 1;
+        const step = (t, p) => ans.append(h('h4', { text: `${n++} · ${t}` }), p);
+        step('Clarify the problem', h('p', { text: a.clarify }));
+        step('Find the root cause', h('p', { text: a.root }));
+        if (a.options) step('Options & trade-offs', h('div', {}, ...a.options.map((o) => h('div', { class: 'ac-opt' }, h('b', { text: o.name }), h('span', {}, h('b', { text: 'For: ' }), o.pros), h('span', {}, h('b', { text: 'Against: ' }), o.cons)))));
+        if (a.qa) a.qa.forEach((x) => step(x.q, h('p', { text: x.a })));
+        if (a.recommend) step('Recommendation & justification', h('p', { text: a.recommend }));
+        step('Risk and execution: what could go wrong', h('p', { text: a.risk }));
+        return h('div', { class: 'ac-case' },
+          h('span', { class: 'ac-case-tag', text: c.tag }), h('h3', { text: c.title }),
+          ...c.scenario.map((p) => h('p', { text: p })),
+          h('table', { class: 'ac-data' }, h('tbody', {}, ...c.data.map(([k, v]) => h('tr', {}, h('td', { text: k }), h('td', { text: v }))))),
+          h('p', { class: 'ac-task', text: 'Your task: ' + c.task }),
+          c.assessors ? [h('div', { class: 'ac-h', text: 'What the assessors are looking for' }), h('div', { class: 'ac-chips' }, ...c.assessors.map((x) => h('span', { text: x })))] : null,
+          c.strongApproach ? h('div', { class: 'ac-quote' }, h('b', { text: 'Strong approach: ' }), c.strongApproach) : null,
+          h('details', {}, h('summary', { text: 'Show model answer (5-step framework)' }), ans));
+      }));
+  } else if (acTab === 'group') {
+    const g = A.group;
+    body.append(h('div', { class: 'ac-note' }, h('b', { text: g.title + '. ' }), g.scenario),
+      h('div', { class: 'ac-h', text: 'The three rules' }),
+      ...g.rules.map((r) => h('div', { class: 'ac-rule' }, h('div', { class: 'fw-num', text: r.n }), h('div', {}, h('h3', { text: r.title }), h('p', { text: r.body })))),
+      h('div', { class: 'ac-h', text: 'What the assessors watch for' }), h('div', { class: 'ac-chips' }, ...g.criteria.map((c) => h('span', { text: c }))),
+      h('div', { class: 'ac-h', text: 'Phrases that score points' }), ...g.powerPhrases.map((p) => h('div', { class: 'ac-quote', text: p })),
+      h('div', { class: 'ac-h', text: 'What not to do' }), h('ul', { class: 'ac-list' }, ...g.donts.map((d) => h('li', { text: d }))));
+  } else if (acTab === 'cbi') {
+    const c = A.cbi;
+    body.append(h('div', { class: 'ac-note' }, h('b', { text: c.star.name + '. ' }), c.star.steps.map(([k, v]) => `${k} — ${v}`).join(' · ')),
+      ...c.questions.map((q) => h('details', { class: 'ac-q' }, h('summary', { text: q.q }),
+        h('div', { class: 'ac-q-body' }, h('span', { class: 'ac-cmp', text: q.competency }), h('ul', { class: 'ac-list' }, ...q.how.map((x) => h('li', { text: x }))),
+          h('div', { class: 'ac-avoid' }, h('b', { text: 'Avoid: ' }), q.avoid)))));
+  } else {
+    const p = A.presentation;
+    body.append(h('div', { class: 'ac-note', text: p.topic }),
+      h('div', { class: 'ac-h', text: 'Suggested structure' }), h('ul', { class: 'ac-list' }, ...p.structure.map(([k, v]) => h('li', {}, h('b', { text: k }), ' — ' + v))),
+      h('div', { class: 'ac-h', text: 'Delivery tips' }), h('ul', { class: 'ac-list' }, ...p.tips.map((t) => h('li', { text: t }))));
+  }
+}
+
+// ─── Event wiring (delegated; no inline handlers) ────────────────────────────
+document.addEventListener('click', (e) => {
+  const nav = e.target.closest('[data-nav]');
+  if (nav) { showView(nav.dataset.nav, nav.dataset.anchor); return; }
+  const anc = e.target.closest('[data-anchor-scroll]');
+  if (anc) { scrollToEl($(anc.dataset.anchorScroll), true); return; }
+  const ask = e.target.closest('[data-ask]');
+  if (ask) { Tutor.send(ask.dataset.ask); return; }
+  const ts = e.target.closest('[data-theme-set]');
+  if (ts) { applyTheme(ts.dataset.themeSet); return; }
+  const act = e.target.closest('[data-action]');
+  if (!act) return;
+  switch (act.dataset.action) {
+    case 'try-next': Try.next(); break;
+    case 'toggle-theme': applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); break;
+    case 'prev': go(-1); break;
+    case 'next': go(1); break;
+    case 'skip': skip(); break;
+    case 'pause': togglePause(); break;
+    case 'end': if (session.reviewing) showView('result'); else { if (session.paused) togglePause(); $('end-overlay').hidden = false; } break;
+    case 'end-cancel': $('end-overlay').hidden = true; break;
+    case 'end-confirm': finish(); break;
+    case 'review': review(); break;
+    case 'again': again(); break;
+    case 'zoom': $('zoom-img').src = $('q-figure-img').src; $('zoom-overlay').hidden = false; break;
+    case 'zoom-close': $('zoom-overlay').hidden = true; break;
+    case 'tutor-open': Tutor.open(); break;
+    case 'tutor-clear': Tutor.clearChat(); break;
+    case 'key-clear': Key.clear(); renderSettings(); break;
+    case 'models-save': {
+      const list = $('model-input').value.split(',').map((s) => s.trim()).filter((s) => /^[\w./:-]{2,100}$/.test(s));
+      store.set('prep_ai_models', list.length ? list : DEFAULT_MODELS);
+      store.set('prep_ai_vision', /^[\w./:-]{2,100}$/.test($('vision-input').value.trim()) ? $('vision-input').value.trim() : '');
+      renderSettings(); $('key-status').textContent = 'Models saved.'; break;
+    }
+    case 'models-reset': store.del('prep_ai_models'); store.del('prep_ai_vision'); renderSettings(); break;
+    case 'reset-progress':
+      if (confirm('Reset all progress, favourites and session history on this device?')) { PROGRESS = { exams: {}, sessions: [], favs: [] }; saveProgress(); renderSettings(); }
+      break;
+    case 'reset-chats':
+      if (confirm('Delete all saved tutor conversations?')) { Tutor.chats = {}; store.del('prep_chat_v2'); store.del('prep_chat_histories'); }
+      break;
+    default: break;
   }
 });
+$('tutor-form').addEventListener('submit', (e) => { e.preventDefault(); const v = $('tutor-input').value; $('tutor-input').value = ''; Tutor.send(v); });
+$('key-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const v = $('key-input').value.trim();
+  if (!/^[\w-]{20,200}$/.test(v)) { $('key-status').textContent = 'That does not look like a Groq API key.'; return; }
+  Key.set(v, $('key-remember').checked); renderSettings();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') $('zoom-overlay').hidden = true;
+  if (currentView !== 'quiz' || !session) return;
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  if (session.paused) { if (e.key === ' ') { e.preventDefault(); togglePause(); } return; }
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(1); return; }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); if (session.cur > 0) go(-1); return; }
+  if (e.key === ' ' && session.mode !== 'free' && !session.reviewing) { e.preventDefault(); togglePause(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toUpperCase();
+  const idx = KEYS.indexOf(k) >= 0 ? KEYS.indexOf(k) : (k >= '1' && k <= '5' ? Number(k) - 1 : -1);
+  const q = session.qs[session.cur];
+  if (idx >= 0 && idx < q.opts.length && session.answered[session.cur] === undefined && !session.reviewing) { e.preventDefault(); pick(idx); }
+});
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (currentThemePref() === 'system') applyTheme('system'); });
+window.addEventListener('beforeunload', (e) => { if (session && session.timer && currentView === 'quiz') { e.preventDefault(); e.returnValue = ''; } });
 
-// ─── STARTUP ───────────────────────────────────────────────────────────
-(function init(){
-  let saved=null;
-  try{ saved=localStorage.getItem('prep_theme'); }catch(e){}
-  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  applyTheme(saved || (prefersDark ? 'dark' : 'light'));
-
-  const ALL=[
-    ['cnt-fb', typeof FIRST_BANK!=='undefined'?FIRST_BANK:[]],
-    ['cnt-ey', typeof EY_BANK!=='undefined'?EY_BANK:[]],
-    ['cnt-sep', typeof SEPLAT_BANK!=='undefined'?SEPLAT_BANK:[]],
-    ['cnt-acc', typeof ACCESS_BANK!=='undefined'?ACCESS_BANK:[]],
-    ['cnt-gtb', typeof GTBANK!=='undefined'?GTBANK:[]],
-    ['cnt-ptb', typeof PREMIUM_TRUST!=='undefined'?PREMIUM_TRUST:[]],
-    ['cnt-gen', typeof GENERAL_APTITUDE_BANK!=='undefined'?GENERAL_APTITUDE_BANK:[]],
-  ];
-  ALL.forEach(([id,bank])=>{
-    const el=document.getElementById(id);
-    if(el) el.textContent = bank.length.toLocaleString()+' questions';
-  });
-
-  const every=[].concat.apply([], ALL.map(x=>x[1]));
-  const total=every.length;
-  const cats=new Set(every.map(q=>q.cat));
-  const withExp=every.filter(q=>q.exp && String(q.exp).trim()).length;
-  const strip=document.getElementById('stat-strip');
-  if(strip && total){
-    strip.innerHTML =
-      '<div class="stat"><b>'+total.toLocaleString()+'</b><span>practice questions</span></div>'+
-      '<div class="stat"><b>'+ALL.length+'</b><span>exam banks</span></div>'+
-      '<div class="stat"><b>'+cats.size+'</b><span>question categories</span></div>'+
-      '<div class="stat"><b>'+Math.round(withExp/total*100)+'%</b><span>with explanations</span></div>';
-  }
-})();
-
-// ─── ASSESSMENT CENTER (First Bank) ─────────────────────────────────────────
-let acTab = 'framework';
-
-function openAssessmentCenter(){
-  if(typeof AC_CONTENT === 'undefined') return;
-  show('s-ac');
-  renderAc();
-  window.scrollTo({top:0, behavior:'smooth'});
-}
-
-function setAcTab(t){ acTab = t; renderAc(); window.scrollTo({top:0, behavior:'smooth'}); }
-
-function renderAc(){
-  const tabs = [['framework','🧭 5-Step Framework'],['cases','📊 Case Studies'],['group','👥 Group Exercise'],['cbi','🎤 CBI Interview'],['presentation','🖥 Presentation']];
-  document.getElementById('ac-tabs').innerHTML = tabs.map(([k,l]) =>
-    `<button class="ac-tab${acTab===k?' active':''}" onclick="setAcTab('${k}')">${l}</button>`).join('');
-  const b = document.getElementById('ac-body');
-  if(acTab==='framework') b.innerHTML = renderAcFramework();
-  else if(acTab==='cases') b.innerHTML = renderAcCases();
-  else if(acTab==='group') b.innerHTML = renderAcGroup();
-  else if(acTab==='cbi') b.innerHTML = renderAcCbi();
-  else b.innerHTML = renderAcPres();
-}
-
-function renderAcFramework(){
-  const f = AC_CONTENT.framework;
-  return `<div class="ac-note"><b>${f.title}.</b> ${f.note}</div>` +
-    f.steps.map(s => `<div class="fw-step"><div class="fw-num">${s.n}</div><div><h3>${s.title}</h3><p>${s.body}</p></div></div>`).join('');
-}
-
-function renderAcCases(){
-  return `<div class="ac-note">Read the scenario, then <b>write your own answer using the 5-step framework before opening the model answer</b>. Your written answer may feed the group discussion — write it to defend it out loud.</div>` +
-    AC_CONTENT.cases.map(c => {
-      const a = c.answer;
-      let inner = `<h4>1 · Clarify the problem</h4><p>${a.clarify}</p><h4>2 · Find the root cause</h4><p>${a.root}</p>`;
-      let n = 3;
-      if(a.options){
-        inner += `<h4>${n} · Options &amp; trade-offs</h4>` + a.options.map(o => `<div class="ac-opt"><b>${o.name}</b><span>✅ ${o.pros}</span><span>⚠️ ${o.cons}</span></div>`).join('');
-        n++;
-      }
-      if(a.qa){
-        inner += a.qa.map(q => `<h4>${n} · ${q.q}</h4><p>${q.a}</p>`).join('');
-        n += a.qa.length;
-      }
-      if(a.recommend){
-        inner += `<h4>${n} · Recommendation &amp; justification</h4><p>${a.recommend}</p>`;
-        n++;
-      }
-      inner += `<h4>${n} · Risk &amp; execution — what could go wrong</h4><p>${a.risk}</p>`;
-      return `
-    <div class="ac-case">
-      <span class="ac-case-tag">${c.tag}</span>
-      <h3>${c.title}</h3>
-      ${c.scenario.map(p => `<p>${p}</p>`).join('')}
-      <table class="ac-data">${c.data.map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
-      <p class="ac-task">Your task: ${c.task}</p>
-      ${c.assessors ? `<div class="ac-h" style="margin-top:14px">What the assessors are looking for</div><div class="ac-chips">${c.assessors.map(a => `<span>${a}</span>`).join('')}</div>` : ''}
-      ${c.strongApproach ? `<div class="ac-quote"><b>Strong approach (from the guide):</b> ${c.strongApproach}</div>` : ''}
-      <details><summary>Show model answer (5-step framework)</summary>
-        <div class="ac-ans">${inner}</div>
-      </details>
-    </div>`;
-    }).join('');
-}
-
-function renderAcGroup(){
-  const g = AC_CONTENT.group;
-  return `
-    <div class="ac-note"><b>${g.title}.</b> ${g.scenario}</div>
-    <div class="ac-h">The three rules — commit these to memory</div>
-    <div class="ac-rules">
-      ${g.rules.map(r => `<div class="ac-rule"><div class="fw-num">${r.n}</div><div><h3>${r.title}</h3><p>${r.body}</p></div></div>`).join('')}
-    </div>
-    <div class="ac-h">What the assessors are watching for</div>
-    <div class="ac-chips">${g.criteria.map(c => `<span>${c}</span>`).join('')}</div>
-    <div class="ac-h">Phrases that score points</div>
-    ${g.powerPhrases.map(p => `<div class="ac-quote">${p}</div>`).join('')}
-    <div class="ac-h">What NOT to do</div>
-    <ul class="ac-list">${g.donts.map(d => `<li>${d}</li>`).join('')}</ul>`;
-}
-
-function renderAcCbi(){
-  const c = AC_CONTENT.cbi;
-  return `
-    <div class="ac-note"><b>${c.star.name}.</b> ${c.star.steps.map(([k,v]) => `<b>${k}</b> — ${v}`).join(' · ')}</div>
-    ${c.questions.map(q => `
-    <details class="ac-q">
-      <summary>${q.q}</summary>
-      <div class="ac-q-body">
-        <span class="ac-cmp">${q.competency}</span>
-        <ul class="ac-list">${q.how.map(h => `<li>${h}</li>`).join('')}</ul>
-        <div class="ac-avoid"><b>Avoid:</b> ${q.avoid}</div>
-      </div>
-    </details>`).join('')}`;
-}
-
-function renderAcPres(){
-  const p = AC_CONTENT.presentation;
-  return `
-    <div class="ac-note">${p.topic}</div>
-    <div class="ac-h">Suggested structure</div>
-    <ul class="ac-list">${p.structure.map(([k,v]) => `<li><b>${k}</b> — ${v}</li>`).join('')}</ul>
-    <div class="ac-h">Delivery tips</div>
-    <ul class="ac-list">${p.tips.map(t => `<li>${t}</li>`).join('')}</ul>`;
-}
+// ─── Start ───────────────────────────────────────────────────────────────────
+applyTheme(currentThemePref());
+// Hero photographs crossfade slowly (the signature move); paused when the tab is hidden.
+const Hero = {
+  i: 0, timer: null,
+  start() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const imgs = document.querySelectorAll('.hero-photo img');
+    if (imgs.length < 2) return;
+    this.timer = setInterval(() => {
+      if (document.hidden || currentView !== 'dashboard') return;
+      imgs[this.i].classList.remove('on'); this.i = (this.i + 1) % imgs.length; imgs[this.i].classList.add('on');
+    }, 6500);
+  },
+};
+const showObs = 'IntersectionObserver' in window && new IntersectionObserver((en) => en.forEach((x) => x.target.classList.toggle('inview', x.isIntersecting)), { threshold: 0.2 });
+if (showObs) document.querySelectorAll('.show').forEach((el) => showObs.observe(el));
+document.querySelectorAll('#v-dashboard .hero-card > *, #v-dashboard .stub > *, .how-text > *, .how .receipt, .sheets > .sec-title, .csheet > *, .stats-left > div, .stats .receipt, .tests-col > *, .show-text, .postcard > *').forEach((el, i, all) => {
+  el.classList.add('rise');
+  const sib = [...el.parentElement.children].indexOf(el);
+  el.style.setProperty('--d', Math.min(sib, 5) * 80 + 'ms');
+});
+document.documentElement.classList.add('js');
+showView('dashboard');
+Hero.start();
