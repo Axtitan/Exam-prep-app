@@ -22,8 +22,9 @@ const EXAMS = [
     desc: 'Quantitative, verbal and abstract reasoning and general knowledge from the 2024 assessment and the study pack, the 100 Dragnet chart questions, and a timed essay test.',
     modes: [M.t(60, 'Standard paper', 'A full mixed paper.'), M.t(45, 'Intensive', 'A balanced challenge against the clock.'), M.t(30, 'Speed drill', 'Half the time, to build pace.'), M.free] },
   { id: 'workforce', name: 'Workforce', org: 'Workforce Group ability test',
-    desc: 'Five Workforce ability papers: verbal, numerical, abstract and critical reasoning, and general knowledge.',
-    modes: [M.t(50, 'Real conditions', '50 questions in 50 minutes, no calculator.'), M.t(35, 'Speed drill', 'A tighter clock to build pace.'), M.free] },
+    desc: 'Five Workforce ability papers plus the 2026 Newcross and Top Talent screenshots: verbal, numerical, abstract and critical reasoning, and general knowledge.',
+    modes: [{ mode: 'free', mins: 0, title: 'Deadline revision', sub: 'Every question from the Newcross and Top Talent 2026 screenshots, with full working.', only: 'dl', all: true },
+      M.t(50, 'Real conditions', '50 questions in 50 minutes, no calculator.'), M.t(35, 'Speed drill', 'A tighter clock to build pace.'), M.free] },
   { id: 'ey', name: 'EY', org: 'EY, Jobberman aptitude',
     desc: 'Logical, numerical, verbal and critical reasoning rebuilt from EY assessment screenshots.',
     modes: [M.t(30, 'Speed drill', 'Half the time, to build pace.'), M.t(40, 'Intensive', 'A balanced challenge against the clock.'), M.t(60, 'Standard paper', 'The real EY clock.'), M.free] },
@@ -42,6 +43,9 @@ const REG = window.PREP_REGISTRY || {};
 const SESSION_SIZE = 50;
 const KEYS = ['A', 'B', 'C', 'D', 'E'];
 const TOTAL = Object.values(REG).reduce((s, r) => s + r.count, 0);
+// Some logic items have more than one valid option; `alsoOk` lists the extra ones.
+const isRight = (q, i) => i === q.ans || (q.alsoOk || []).includes(i);
+const answerText = (q) => [q.ans, ...(q.alsoOk || [])].sort().map((i) => `${KEYS[i]}) ${q.opts[i]}`).join('  or  ');
 
 // ─── Small DOM helpers ───────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
@@ -213,14 +217,14 @@ const Try = {
     $('try-q').textContent = q.q;
     fill($('try-opts'), ...q.opts.map((o, i) => {
       let cls = 'bubble';
-      if (done && i === q.ans) cls += ' correct'; else if (done && i === chosen) cls += ' wrong';
+      if (done && isRight(q, i)) cls += ' correct'; else if (done && i === chosen) cls += ' wrong';
       return h('button', { class: cls, disabled: done, onclick: () => this.paint(i), 'aria-label': `Option ${KEYS[i]}: ${o}` },
         h('span', { class: 'dot', text: KEYS[i] }), h('span', { text: o }));
     }));
     const res = $('try-result');
     res.hidden = !done; $('try-next').hidden = !done;
     if (done) {
-      const ok = chosen === q.ans;
+      const ok = isRight(q, chosen);
       fill(res, h('p', { class: 'verdict', text: ok ? 'Right.' : `Not quite. The answer is ${KEYS[q.ans]}.` }), h('p', { text: q.exp }));
     }
   },
@@ -273,8 +277,9 @@ let session = null;
 async function startExam(m) {
   let bank;
   try { bank = await loadBank(currentExam); } catch (e) { alert('Sorry, the questions could not be loaded. Check your connection and try again.'); return; }
-  const pool = selectedCats.size ? bank.filter((q) => selectedCats.has(q.cat)) : bank;
-  begin({ kind: 'exam', examId: currentExam, label: EXAM[currentExam].name, mode: m.mode, mins: m.mins, pool, cats: [...selectedCats] });
+  const base = m.only ? bank.filter((q) => q[m.only]) : bank;
+  const pool = selectedCats.size ? base.filter((q) => selectedCats.has(q.cat)) : base;
+  begin({ kind: 'exam', examId: currentExam, label: m.only ? `${EXAM[currentExam].name} ${m.title.toLowerCase()}` : EXAM[currentExam].name, mode: m.mode, mins: m.mins, pool, cats: [...selectedCats], all: m.all });
 }
 async function startTopic(t) {
   let pool = [];
@@ -287,7 +292,7 @@ async function startTopic(t) {
   begin({ kind: 'topic', examId: null, label: t.name, mode: 'free', mins: 0, pool, topic: t });
 }
 function begin(cfg) {
-  const qs = shuffle([...cfg.pool]).slice(0, SESSION_SIZE);
+  const qs = shuffle([...cfg.pool]).slice(0, cfg.all ? undefined : SESSION_SIZE);
   if (!qs.length) { alert('No questions match the selected topics.'); return; }
   stopTimer();
   session = Object.assign(cfg, { qs, cur: 0, answered: {}, skipped: new Set(), correct: 0, wrong: 0, reviewing: false, paused: false, timeLeft: cfg.mins * 60, timer: null, saved: false });
@@ -330,7 +335,7 @@ function render() {
   const opts = clear($('opts'));
   q.opts.forEach((o, i) => {
     let cls = 'opt';
-    if (isAns && i === q.ans) cls += ' correct';
+    if (isAns && isRight(q, i)) cls += ' correct';
     else if (isAns && i === s.answered[s.cur]) cls += ' wrong';
     opts.append(h('button', { class: cls, role: 'listitem', disabled: isAns || s.reviewing, onclick: () => pick(i), 'aria-label': `Option ${KEYS[i]}: ${o}` },
       h('span', { class: 'opt-key', text: KEYS[i] }), h('span', { class: 'opt-txt', text: o })));
@@ -338,17 +343,17 @@ function render() {
 
   const exp = $('exp');
   if (isAns) {
-    const ok = s.answered[s.cur] === q.ans;
+    const ok = isRight(q, s.answered[s.cur]);
     exp.hidden = false;
     const head = $('exp-head'); head.className = 'exp-head ' + (ok ? 'ok' : 'err');
     head.textContent = ok ? 'Right.' : `Not quite. You chose ${KEYS[s.answered[s.cur]]}.`;
     fill($('exp-body'), 
-      h('div', { class: 'exp-answer', text: `Answer: ${KEYS[q.ans]}) ${q.opts[q.ans]}` }),
+      h('div', { class: 'exp-answer', text: `Answer: ${answerText(q)}` }),
       h('div', { text: q.exp || 'No written working for this question yet. Ask the tutor below.' }),
       q.note ? h('div', { class: 'exp-note' }, h('strong', { text: 'Note on this question: ' }), q.note) : null);
   } else if (s.reviewing) {
     exp.hidden = false; $('exp-head').className = 'exp-head'; $('exp-head').textContent = 'Not answered';
-    fill($('exp-body'), h('div', { class: 'exp-answer', text: `Answer: ${KEYS[q.ans]}) ${q.opts[q.ans]}` }), h('div', { text: q.exp || '' }), q.note ? h('div', { class: 'exp-note', text: 'Note on this question: ' + q.note }) : null);
+    fill($('exp-body'), h('div', { class: 'exp-answer', text: `Answer: ${answerText(q)}` }), h('div', { text: q.exp || '' }), q.note ? h('div', { class: 'exp-note', text: 'Note on this question: ' + q.note }) : null);
   } else exp.hidden = true;
 
   Tutor.attach(q, isAns || s.reviewing ? s.answered[s.cur] : undefined, isAns || s.reviewing);
@@ -362,7 +367,7 @@ function renderDots() {
   fill($('dots'), ...s.qs.map((q, i) => {
     let cls = 'dot-btn';
     if (i === s.cur) cls += ' current';
-    if (s.answered[i] !== undefined) cls += s.answered[i] === q.ans ? ' ok' : ' err';
+    if (s.answered[i] !== undefined) cls += isRight(q, s.answered[i]) ? ' ok' : ' err';
     else if (s.skipped.has(i)) cls += ' skipped';
     return h('button', { class: cls, text: i + 1, title: q.cat, 'aria-label': `Go to question ${i + 1}`, onclick: () => { s.cur = i; render(); } });
   }));
@@ -371,7 +376,7 @@ function pick(i) {
   const s = session, q = s.qs[s.cur];
   if (s.answered[s.cur] !== undefined || s.reviewing) return;
   s.answered[s.cur] = i; s.skipped.delete(s.cur);
-  const ok = i === q.ans;
+  const ok = isRight(q, i);
   if (ok) s.correct++; else s.wrong++;
   const ex = examOf(q);
   if (ex && q.id) { examProg(ex).seen[q.id] = ok ? 1 : 0; saveProgress(); }
@@ -412,7 +417,7 @@ function finish() {
   const cats = [...new Set(s.qs.map((q) => q.cat))];
   fill($('r-breakdown'), h('p', { class: 'r-group', text: 'By topic' }), ...cats.flatMap((cat) => {
     const idx = s.qs.map((q, i) => (q.cat === cat ? i : -1)).filter((i) => i >= 0);
-    const ans = idx.filter((i) => s.answered[i] !== undefined), cor = idx.filter((i) => s.answered[i] === s.qs[i].ans);
+    const ans = idx.filter((i) => s.answered[i] !== undefined), cor = idx.filter((i) => s.answered[i] !== undefined && isRight(s.qs[i], s.answered[i]));
     const cp = ans.length ? Math.round((cor.length / ans.length) * 100) : 0;
     const bar = h('span'); bar.style.width = cp + '%';
     return [leaderRow(cat, `${cor.length} of ${ans.length}`), h('div', { class: 'bd-meter', 'aria-hidden': 'true' }, bar)];
@@ -500,8 +505,8 @@ const Tutor = {
     if (q.passage) lines.push('', 'PASSAGE / DATA BRIEF:', q.passage.slice(0, 6000));
     if (q.img) lines.push('', `FIGURE: the question uses a figure (“${q.imgLabel || 'figure'}”).${this.withImage ? ' It is attached to the first user message.' : ' You cannot see it, so rely on the official explanation for any values read from it and say so if needed.'}`);
     lines.push('', 'QUESTION:', q.q, '', 'OPTIONS:', ...q.opts.map((o, i) => `${KEYS[i]}) ${o}`),
-      '', `CORRECT ANSWER: ${KEYS[q.ans]}) ${q.opts[q.ans]}`);
-    if (this.chosen !== undefined) lines.push(`STUDENT CHOSE: ${KEYS[this.chosen]}) ${q.opts[this.chosen]}${this.chosen === q.ans ? ' (correct)' : ' (incorrect)'}`);
+      '', `CORRECT ANSWER: ${answerText(q)}`);
+    if (this.chosen !== undefined) lines.push(`STUDENT CHOSE: ${KEYS[this.chosen]}) ${q.opts[this.chosen]}${isRight(q, this.chosen) ? ' (correct)' : ' (incorrect)'}`);
     if (q.exp) lines.push('', 'OFFICIAL EXPLANATION:', q.exp);
     if (q.note) lines.push('', 'EDITOR’S NOTE:', q.note);
     lines.push('', 'RULES:', '- Be direct. Refer to options by letter.', '- Keep replies under ~150 words unless a calculation needs more steps.',

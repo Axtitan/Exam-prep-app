@@ -87,12 +87,12 @@ window.PREP_REGISTRY = {
   }
  },
  "workforce": {
-  "count": 248,
+  "count": 299,
   "cats": {
-   "Verbal Reasoning": 65,
-   "Critical Reasoning": 43,
+   "Verbal Reasoning": 90,
+   "Critical Reasoning": 59,
    "Abstract Reasoning": 30,
-   "Numerical Reasoning": 90,
+   "Numerical Reasoning": 100,
    "Verbal Ability": 10,
    "General Knowledge": 10
   }
