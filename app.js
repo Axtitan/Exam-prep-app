@@ -510,7 +510,8 @@ const Tutor = {
     if (q.exp) lines.push('', 'OFFICIAL EXPLANATION:', q.exp);
     if (q.note) lines.push('', 'EDITOR’S NOTE:', q.note);
     lines.push('', 'RULES:', '- Be direct. Refer to options by letter.', '- Keep replies under ~150 words unless a calculation needs more steps.',
-      '- Show arithmetic line by line when numbers are involved.', '- No filler such as “great question”.', '- Plain text; **bold** is allowed sparingly.');
+      '- Show arithmetic line by line when numbers are involved.', '- No filler such as “great question”.', '- Plain text; **bold** is allowed sparingly.',
+      '- Never use LaTeX or maths markup (no \\( \\), \\[ \\], $…$, \\frac, \\times). The reply is shown as plain text, so write maths the way you would type it: 3x − 2y = 24, x/4 − y/6 = 1, 5² = 25, √49 = 7, 12 × 3, 15 ÷ 5, ≤, ≥, ≠, ⇒.');
     return lines.join('\n');
   },
   async send(text) {
@@ -571,7 +572,46 @@ const Tutor = {
     throw new Error('The tutor could not answer right now. ' + last + ' You can change the model list in Settings.');
   },
 };
-function cleanReply(t) { return String(t).replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^#{1,6}\s*/gm, '').trim() || '(empty reply)'; }
+function cleanReply(t) { return delatex(String(t).replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^#{1,6}\s*/gm, '')).trim() || '(empty reply)'; }
+
+// Models still slip into LaTeX now and then; turn the common commands into readable plain text.
+const TEX_SYMBOLS = {
+  times: '×', div: '÷', cdot: '·', pm: '±', mp: '∓', le: '≤', leq: '≤', ge: '≥', geq: '≥', neq: '≠', ne: '≠', approx: '≈', equiv: '≡',
+  Rightarrow: '⇒', Longrightarrow: '⇒', implies: '⇒', Leftarrow: '⇐', Leftrightarrow: '⇔', iff: '⇔', rightarrow: '→', to: '→', longrightarrow: '→', leftarrow: '←',
+  therefore: '∴', because: '∵', infty: '∞', circ: '°', degree: '°', percent: '%', ldots: '…', cdots: '…', dots: '…',
+  alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', Delta: 'Δ', theta: 'θ', lambda: 'λ', mu: 'μ', pi: 'π', sigma: 'σ', Sigma: 'Σ', omega: 'ω',
+  in: '∈', cup: '∪', cap: '∩', subset: '⊂', angle: '∠', triangle: '△', perp: '⊥', parallel: '∥', sum: 'Σ',
+};
+const SUP = { 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹', '-': '⁻', '+': '⁺', n: 'ⁿ' };
+const SUB = { 0: '₀', 1: '₁', 2: '₂', 3: '₃', 4: '₄', 5: '₅', 6: '₆', 7: '₇', 8: '₈', 9: '₉' };
+const group = (s) => (/^[\w.²³]+$/.test(s) ? s : `(${s})`);
+function delatex(s) {
+  if (!/\\[a-zA-Z()[\]]|\$\$|\$[^$\n]*\\/.test(s)) return s;
+  s = s.replace(/\\begin\{[a-z*]+\}|\\end\{[a-z*]+\}/g, '')
+    .replace(/\$\$|\\\[|\\\]|\\\(|\\\)/g, '')
+    .replace(/\$([^$\n]*\\[^$\n]*)\$/g, '$1')
+    .replace(/\\(?:left|right|big|Big|bigg|displaystyle|limits)\b\s*/g, '')
+    .replace(/\\(?:text|mathrm|mathbf|textbf|operatorname|mathit|boxed)\{([^{}]*)\}/g, '$1')
+    .replace(/\\%/g, '%').replace(/\\\$/g, '$').replace(/\\&/g, '&').replace(/\\_/g, '_')
+    .replace(/\\\\\s*/g, '\n').replace(/&(?=\s*[=<>≤≥≈])/g, '')
+    .replace(/\\(?:quad|qquad|[,;:! ])/g, ' ');
+  for (let i = 0; i < 6; i++) {
+    const before = s;
+    s = s.replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, (_, a, b) => `${group(a.trim())}/${group(b.trim())}`)
+      .replace(/\\sqrt\s*\[([^\]]*)\]\s*\{([^{}]*)\}/g, (_, n, a) => `${n === '3' ? '∛' : `(${n})√`}${group(a.trim())}`)
+      .replace(/\\sqrt\s*\{([^{}]*)\}/g, (_, a) => `√${group(a.trim())}`)
+      .replace(/\{([^{}]*)\}\s*\^/g, '($1)^');
+    if (s === before) break;
+  }
+  s = s.replace(/\^\s*\{?\\circ\}?/g, '°')
+    .replace(/\^\{([^{}]*)\}|\^(\S)/g, (m, a, b) => { const x = a ?? b; return [...x].every((c) => SUP[c]) ? [...x].map((c) => SUP[c]).join('') : `^(${x})`; })
+    .replace(/_\{([^{}]*)\}|_(\d)/g, (m, a, b) => { const x = a ?? b; return [...x].every((c) => SUB[c]) ? [...x].map((c) => SUB[c]).join('') : `_${x}`; })
+    .replace(/\\([a-zA-Z]+)/g, (m, w) => (w in TEX_SYMBOLS ? TEX_SYMBOLS[w] : w))
+    .replace(/[{}]/g, '')
+    .replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+$/gm, '').replace(/^[ \t]+/gm, '')
+    .replace(/\n{3,}/g, '\n\n');
+  return s;
+}
 function renderMsg(role, content) {
   const el = h('div', { class: 'msg ' + role });
   // Safe minimal formatting: **bold** becomes <strong>, everything else stays text.
